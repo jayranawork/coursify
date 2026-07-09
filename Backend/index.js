@@ -1,71 +1,56 @@
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
-const { UserRouter } = require("./routers/user"); // Routing in express
-const { CourseRouter } = require("./routers/course");
-const { adminRouter } = require("./routers/admin");
+const config = require("./config");
+const { notFound, errorHandler } = require("./middlewares/error");
+
+const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/users");
+const courseRoutes = require("./routes/courses");
+const enrollmentRoutes = require("./routes/enrollments");
+const orderRoutes = require("./routes/orders");
+const socialRoutes = require("./routes/social");
+const dashboardRoutes = require("./routes/dashboards");
 
 const app = express();
-const port = process.env.PORT || 3002;
 
-// CORS configuration
-app.use(cors({
-    origin: [
-        'http://localhost:5500', 
-        'http://127.0.0.1:5500', 
-        'https://coursify-repw.onrender.com',
-        'https://coursify-frontend-f90i.onrender.com'  // Your new frontend URL
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'token'],
-    credentials: true
-}));
-
+app.use(
+  cors({
+    origin: config.corsOrigins.length ? config.corsOrigins : true,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// Root route
-app.get('/', (req, res) => {
-    res.json({
-        message: "Welcome to Coursify API",
-        status: "Server is running",
-        endpoints: {
-            user: "/api/v1/user",
-            course: "/api/v1/course",
-            admin: "/api/v1/admin"
-        }
-    });
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "Coursify API is running",
+  });
 });
 
-// Routes
-app.use("/api/v1/user", UserRouter);
-app.use("/api/v1/course", CourseRouter);
-app.use("/api/v1/admin", adminRouter);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/enrollments", enrollmentRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api", socialRoutes);
+app.use("/api", dashboardRoutes);
 
-async function main() {
-    try {
-        await mongoose.connect(process.env.MONGODB_URL);
-        console.log("Connected to MongoDB");
-        
-        const server = app.listen(port, () => {
-            console.log("Server is running on port " + port);
-        });
+app.use(notFound);
+app.use(errorHandler);
 
-        // Handle server errors
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                console.error(`Port ${port} is already in use. Please try a different port or close the application using this port.`);
-                process.exit(1);
-            } else {
-                console.error('Server error:', error);
-            }
-        });
+const start = async () => {
+  try {
+    await mongoose.connect(config.mongoUrl);
+    app.listen(config.port, () => {
+      console.log(`Coursify API running on port ${config.port}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+};
 
-    } catch (err) {
-        console.error("MongoDB connection error:", err);
-        process.exit(1);
-    }
-}
-
-main();
+start();
