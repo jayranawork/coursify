@@ -1,21 +1,26 @@
-// Validate required environment variables
-const requiredEnvVars = ['MONGODB_URL', 'JWT_USER_PASSWORD', 'JWT_ADMIN_PASSWORD'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const requiredEnvVars = ["MONGODB_URL", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET", "PORT"];
+const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
 
 if (missingEnvVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  throw new Error(`Missing required environment variables: ${missingEnvVars.join(", ")}`);
 }
 
-// Get JWT secrets from environment variables
-const JWT_USER_PASSWORD = process.env.JWT_USER_PASSWORD;
-const JWT_ADMIN_PASSWORD = process.env.JWT_ADMIN_PASSWORD;
-
-// Validate JWT secrets
-if (JWT_USER_PASSWORD.length < 32 || JWT_ADMIN_PASSWORD.length < 32) {
-    throw new Error('JWT secrets must be at least 32 characters long');
-}
-
-module.exports = {
-    JWT_ADMIN_PASSWORD,
-    JWT_USER_PASSWORD
+const config = {
+  port: Number(process.env.PORT),
+  mongoUrl: process.env.MONGODB_URL,
+  jwtAccessSecret: process.env.JWT_ACCESS_SECRET,
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
+  accessTokenTtl: "15m",
+  refreshTokenTtl: "7d",
+  bcryptSaltRounds: 12,
+  corsOrigins: (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 };
+
+module.exports = config;

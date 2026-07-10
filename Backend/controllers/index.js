@@ -1,0 +1,277 @@
+const asyncHandler = require("../utils/asyncHandler");
+const ApiError = require("../utils/apiError");
+const {
+  authService,
+  userService,
+  courseService,
+  sectionService,
+  lessonService,
+  enrollmentService,
+  orderService,
+  reviewService,
+  wishlistService,
+  categoryService,
+  couponService,
+  notificationService,
+} = require("../services");
+
+const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
+
+const authController = {
+  register: asyncHandler(async (req, res) => {
+    const data = await authService.register(req.body);
+    send(res, data, 201);
+  }),
+  login: asyncHandler(async (req, res) => {
+    const data = await authService.login(req.body);
+    send(res, data);
+  }),
+  refresh: asyncHandler(async (req, res) => {
+    const data = await authService.refresh(req.body.refreshToken);
+    send(res, data);
+  }),
+  logout: asyncHandler(async (req, res) => {
+    await authService.logout(req.body.refreshToken);
+    send(res, { success: true });
+  }),
+};
+
+const userController = {
+  me: asyncHandler(async (req, res) => {
+    const data = await authService.getCurrentUser(req.user.id);
+    send(res, data);
+  }),
+  updateMe: asyncHandler(async (req, res) => {
+    const data = await userService.updateMe(req.user.id, req.body);
+    send(res, data);
+  }),
+  getById: asyncHandler(async (req, res) => {
+    const data = await userService.getById(req.params.id);
+    send(res, data);
+  }),
+  list: asyncHandler(async (req, res) => {
+    const data = await authService.listUsers(req.query);
+    send(res, data);
+  }),
+  updateStatus: asyncHandler(async (req, res) => {
+    const data = await userService.updateStatus(req.params.id, req.body.status);
+    send(res, data);
+  }),
+};
+
+const courseController = {
+  listPublic: asyncHandler(async (req, res) => {
+    const data = await courseService.listPublic(req.query);
+    send(res, data);
+  }),
+  getPublicBySlug: asyncHandler(async (req, res) => {
+    const data = await courseService.getPublicBySlug(req.params.slug);
+    send(res, data);
+  }),
+  create: asyncHandler(async (req, res) => {
+    const data = await courseService.create(req.user, req.body);
+    send(res, data, 201);
+  }),
+  update: asyncHandler(async (req, res) => {
+    const data = await courseService.update(req.user, req.params.id, req.body);
+    send(res, data);
+  }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await courseService.delete(req.user, req.params.id);
+    send(res, data);
+  }),
+  publish: asyncHandler(async (req, res) => {
+    const data = await courseService.publish(req.user, req.params.id, req.body.isPublished);
+    send(res, data);
+  }),
+  adminList: asyncHandler(async (req, res) => {
+    const data = await courseService.adminList(req.query);
+    send(res, data);
+  }),
+  instructorCourses: asyncHandler(async (req, res) => {
+    const data = await courseService.instructorCourses(req.user.id, req.query);
+    send(res, data);
+  }),
+};
+
+const sectionController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await sectionService.create(req.user, req.params.id, req.body);
+    send(res, data, 201);
+  }),
+  update: asyncHandler(async (req, res) => {
+    const data = await sectionService.update(req.user, req.params.id, req.body);
+    send(res, data);
+  }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await sectionService.delete(req.user, req.params.id);
+    send(res, data);
+  }),
+};
+
+const lessonController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await lessonService.create(req.user, req.params.id, req.body);
+    send(res, data, 201);
+  }),
+  update: asyncHandler(async (req, res) => {
+    const data = await lessonService.update(req.user, req.params.id, req.body);
+    send(res, data);
+  }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await lessonService.delete(req.user, req.params.id);
+    send(res, data);
+  }),
+};
+
+const enrollmentController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await enrollmentService.enroll(req.user, req.body);
+    send(res, data, 201);
+  }),
+  me: asyncHandler(async (req, res) => {
+    const data = await enrollmentService.myEnrollments(req.user.id);
+    send(res, data);
+  }),
+  progress: asyncHandler(async (req, res) => {
+    const data = await enrollmentService.updateProgress(req.user, req.body);
+    send(res, data);
+  }),
+  courseProgress: asyncHandler(async (req, res) => {
+    const data = await enrollmentService.getCourseProgress(req.user, req.params.id);
+    send(res, data);
+  }),
+};
+
+const orderController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await orderService.create(req.user, req.body);
+    send(res, data, 201);
+  }),
+  me: asyncHandler(async (req, res) => {
+    const data = await orderService.myOrders(req.user.id);
+    send(res, data);
+  }),
+  list: asyncHandler(async (req, res) => {
+    const data = await orderService.listOrders(req.query);
+    send(res, data);
+  }),
+};
+
+const reviewController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await reviewService.create(req.user, req.params.id, req.body);
+    send(res, data, 201);
+  }),
+  list: asyncHandler(async (req, res) => {
+    const data = await reviewService.list(req.params.id, req.query);
+    send(res, data);
+  }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await reviewService.remove(req.user, req.params.id);
+    send(res, data);
+  }),
+};
+
+const wishlistController = {
+  add: asyncHandler(async (req, res) => {
+    const data = await wishlistService.add(req.user, req.params.courseId);
+    send(res, data, 201);
+  }),
+  remove: asyncHandler(async (req, res) => {
+    const data = await wishlistService.remove(req.user, req.params.courseId);
+    send(res, data);
+  }),
+  list: asyncHandler(async (req, res) => {
+    const data = await wishlistService.list(req.user);
+    send(res, data);
+  }),
+};
+
+const categoryController = {
+  list: asyncHandler(async (req, res) => {
+    const data = await categoryService.list();
+    send(res, data);
+  }),
+  create: asyncHandler(async (req, res) => {
+    const data = await categoryService.create(req.body);
+    send(res, data, 201);
+  }),
+  update: asyncHandler(async (req, res) => {
+    const data = await categoryService.update(req.params.id, req.body);
+    send(res, data);
+  }),
+};
+
+const couponController = {
+  create: asyncHandler(async (req, res) => {
+    const data = await couponService.create(req.body);
+    send(res, data, 201);
+  }),
+  list: asyncHandler(async (req, res) => {
+    const data = await couponService.list();
+    send(res, data);
+  }),
+  validate: asyncHandler(async (req, res) => {
+    const data = await couponService.validate(req.body.code);
+    send(res, data);
+  }),
+};
+
+const notificationController = {
+  list: asyncHandler(async (req, res) => {
+    const data = await notificationService.list(req.user.id);
+    send(res, data);
+  }),
+  markRead: asyncHandler(async (req, res) => {
+    const data = await notificationService.markRead(req.user.id, req.params.id);
+    send(res, data);
+  }),
+  markAllRead: asyncHandler(async (req, res) => {
+    const data = await notificationService.markAllRead(req.user.id);
+    send(res, data);
+  }),
+};
+
+const instructorController = {
+  courses: asyncHandler(async (req, res) => {
+    const data = await courseService.instructorCourses(req.user.id, req.query);
+    send(res, data);
+  }),
+  stats: asyncHandler(async (req, res) => {
+    const data = await courseService.instructorStats(req.user.id);
+    send(res, data);
+  }),
+};
+
+const adminController = {
+  stats: asyncHandler(async (req, res) => {
+    const data = await courseService.adminStats();
+    send(res, data);
+  }),
+  users: asyncHandler(async (req, res) => {
+    const data = await authService.listUsers(req.query);
+    send(res, data);
+  }),
+  courses: asyncHandler(async (req, res) => {
+    const data = await courseService.adminList(req.query);
+    send(res, data);
+  }),
+};
+
+module.exports = {
+  authController,
+  userController,
+  courseController,
+  sectionController,
+  lessonController,
+  enrollmentController,
+  orderController,
+  reviewController,
+  wishlistController,
+  categoryController,
+  couponController,
+  notificationController,
+  instructorController,
+  adminController,
+};

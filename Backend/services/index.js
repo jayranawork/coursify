@@ -1,0 +1,780 @@
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
+
+const config = require("../config");
+const ApiError = require("../utils/apiError");
+const slugify = require("../utils/slugify");
+const paginate = require("../utils/paginate");
+const {
+  setRefreshToken,
+  getRefreshToken,
+  deleteRefreshToken,
+  deleteTokensByUserId,
+} = require("../utils/tokenStore");
+const {
+  User,
+  Category,
+  Course,
+  CourseSection,
+  Lesson,
+  Enrollment,
+  Order,
+  OrderItem,
+  Review,
+  Wishlist,
+  CourseProgress,
+  Coupon,
+  Notification,
+} = require("../models");
+
+const sanitizeUser = (user) => {
+  if (!user) return null;
+  const plain = user.toObject ? user.toObject() : user;
+  delete plain.passwordHash;
+  return plain;
+};
+
+const buildTokens = async (user) => {
+  const payload = {
+    sub: user._id.toString(),
+    role: user.role,
+    email: user.email,
+  };
+
+  const accessToken = jwt.sign(payload, config.jwtAccessSecret, {
+    expiresIn: config.accessTokenTtl,
+  });
+  const refreshToken = jwt.sign(payload, config.jwtRefreshSecret, {
+    expiresIn: config.refreshTokenTtl,
+  });
+
+  setRefreshToken(refreshToken, payload);
+
+  return { accessToken, refreshToken };
+};
+
+const verifyRefreshToken = (token) => {
+  try {
+    if (!token || !getRefreshToken(token)) {
+      throw new ApiError(401, "Refresh token is invalid");
+    }
+
+    return jwt.verify(token, config.jwtRefreshSecret);
+  } catch (error) {
+    throw new ApiError(401, "Refresh token is invalid or expired");
+  }
+};
+
+const ensureRoleAllowed = (role) => {
+  if (!["student", "instructor", "admin"].includes(role)) {
+    throw new ApiError(400, "Invalid role");
+  }
+  if (role === "admin") {
+    throw new ApiError(400, "Public registration cannot create admin users");
+  }
+};
+
+const isOwnerOrAdmin = (actor, ownerId) =>
+  actor?.role === "admin" || String(actor?.id) === String(ownerId);
+
+const getCourseByIdentifier = async (identifier, bySlug = false) => {
+  const query = bySlug ? { slug: identifier } : { _id: identifier };
+  const course = await Course.findOne(query);
+  if (!course) {
+    throw new ApiError(404, "Course not found");
+  }
+  return course;
+};
+
+const upsertNotification = async ({ userId, type, title, message }) => {
+  return Notification.create({ userId, type, title, message });
+};
+
+const recalcCourseRatings = async (courseId) => {
+  const stats = await Review.aggregate([
+    { $match: { courseId: new mongoose.Types.ObjectId(courseId) } },
+    {
+      $group: {
+        _id: "$courseId",
+        ratingAvg: { $avg: "$rating" },
+        ratingCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const result = stats[0] || { ratingAvg: 0, ratingCount: 0 };
+  await Course.updateOne(
+    { _id: courseId },
+    { ratingAvg: result.ratingAvg || 0, ratingCount: result.ratingCount || 0 }
+  );
+};
+
+const resolveCoursePrice = (course) =>
+  course.discountPrice && course.discountPrice > 0 ? course.discountPrice : course.price;
+
+const courseSearchFilter = (query) => {
+  const filter = { isPublished: true };
+
+  if (query.categoryId) filter.categoryId = query.categoryId;
+  if (query.level) filter.level = query.level;
+  if (query.instructorId) filter.instructorId = query.instructorId;
+  if (query.minPrice || query.maxPrice) {
+    filter.price = {};
+    if (query.minPrice) filter.price.$gte = Number(query.minPrice);
+    if (query.maxPrice) filter.price.$lte = Number(query.maxPrice);
+  }
+  if (query.search) {
+    const regex = new RegExp(query.search, "i");
+    filter.$or = [
+      { title: regex },
+      { description: regex },
+      { shortDescription: regex },
+      { tags: regex },
+    ];
+  }
+
+  return filter;
+};
+
+const authService = {
+  async register(payload) {
+    ensureRoleAllowed(payload.role || "student");
+
+    const existingUser = await User.findOne({ email: payload.email.toLowerCase() });
+    if (existingUser) {
+      throw new ApiError(409, "Email already exists");
+    }
+
+    const passwordHash = await bcrypt.hash(payload.password, config.bcryptSaltRounds);
+    const user = await User.create({
+      name: payload.name,
+      email: payload.email.toLowerCase(),
+      passwordHash,
+      role: payload.role || "student",
+      avatar: payload.avatar || "",
+      bio: payload.bio || "",
+    });
+
+    const tokens = await buildTokens(user);
+
+    return {
+      user: sanitizeUser(user),
+      ...tokens,
+    };
+  },
+
+  async login(payload) {
+    const user = await User.findOne({ email: payload.email.toLowerCase() });
+    if (!user) {
+      throw new ApiError(401, "Invalid credentials");
+    }
+
+    if (user.status !== "active") {
+      throw new ApiError(403, "User account is blocked");
+    }
+
+    const matched = await bcrypt.compare(payload.password, user.passwordHash);
+    if (!matched) {
+      throw new ApiError(401, "Invalid credentials");
+    }
+
+    const tokens = await buildTokens(user);
+
+    return {
+      user: sanitizeUser(user),
+      ...tokens,
+    };
+  },
+
+  async refresh(refreshToken) {
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await User.findById(decoded.sub);
+    if (!user || user.status !== "active") {
+      throw new ApiError(401, "User is no longer active");
+    }
+
+    deleteRefreshToken(refreshToken);
+    const tokens = await buildTokens(user);
+
+    return {
+      user: sanitizeUser(user),
+      ...tokens,
+    };
+  },
+
+  async logout(refreshToken) {
+    if (refreshToken) {
+      deleteRefreshToken(refreshToken);
+    }
+    return { success: true };
+  },
+
+  async getCurrentUser(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new ApiError(404, "User not found");
+    return sanitizeUser(user);
+  },
+
+  async listUsers(query) {
+    return paginate(User, {}, { page: query.page, limit: query.limit, sort: { createdAt: -1 }, select: "-passwordHash" });
+  },
+};
+
+const userService = {
+  async updateMe(userId, payload) {
+    const updates = {};
+    if (payload.name !== undefined) updates.name = payload.name;
+    if (payload.avatar !== undefined) updates.avatar = payload.avatar;
+    if (payload.bio !== undefined) updates.bio = payload.bio;
+    if (payload.email !== undefined) updates.email = payload.email.toLowerCase();
+    if (payload.password !== undefined) {
+      updates.passwordHash = await bcrypt.hash(payload.password, config.bcryptSaltRounds);
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updates, { new: true });
+    if (!user) throw new ApiError(404, "User not found");
+    return sanitizeUser(user);
+  },
+
+  async getById(id) {
+    const user = await User.findById(id);
+    if (!user) throw new ApiError(404, "User not found");
+    return sanitizeUser(user);
+  },
+
+  async updateStatus(id, status) {
+    const user = await User.findByIdAndUpdate(id, { status }, { new: true });
+    if (!user) throw new ApiError(404, "User not found");
+    return sanitizeUser(user);
+  },
+};
+
+const courseService = {
+  async listPublic(query) {
+    const filter = courseSearchFilter(query);
+    const result = await paginate(Course, filter, {
+      page: query.page,
+      limit: query.limit,
+      sort: { createdAt: -1 },
+    });
+    return result;
+  },
+
+  async getPublicBySlug(slug) {
+    const course = await Course.findOne({ slug, isPublished: true });
+    if (!course) throw new ApiError(404, "Course not found");
+
+    const sections = await CourseSection.find({ courseId: course._id }).sort({ order: 1 });
+    const lessons = await Lesson.find({ courseId: course._id }).sort({ order: 1 });
+
+    return { course, sections, lessons };
+  },
+
+  async create(actor, payload) {
+    if (!["instructor", "admin"].includes(actor.role)) {
+      throw new ApiError(403, "Only instructors or admins can create courses");
+    }
+
+    const baseSlug = slugify(payload.title);
+    let slug = baseSlug;
+    let counter = 1;
+    while (await Course.findOne({ slug })) {
+      slug = `${baseSlug}-${counter}`;
+      counter += 1;
+    }
+
+    const course = await Course.create({
+      title: payload.title,
+      slug,
+      description: payload.description,
+      shortDescription: payload.shortDescription || "",
+      thumbnailUrl: payload.thumbnailUrl || "",
+      previewVideoUrl: payload.previewVideoUrl || "",
+      price: payload.price,
+      discountPrice: payload.discountPrice || 0,
+      level: payload.level || "beginner",
+      language: payload.language || "en",
+      categoryId: payload.categoryId || null,
+      instructorId: actor.role === "admin" && payload.instructorId ? payload.instructorId : actor.id,
+      tags: payload.tags || [],
+      isPublished: Boolean(payload.isPublished),
+      isFeatured: Boolean(payload.isFeatured),
+    });
+
+    return course;
+  },
+
+  async update(actor, courseId, payload) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    if (!isOwnerOrAdmin(actor, course.instructorId)) {
+      throw new ApiError(403, "You cannot edit this course");
+    }
+
+    const updates = { ...payload };
+    if (payload.title && payload.title !== course.title) {
+      const baseSlug = slugify(payload.title);
+      let slug = baseSlug;
+      let counter = 1;
+      while (await Course.findOne({ slug, _id: { $ne: courseId } })) {
+        slug = `${baseSlug}-${counter}`;
+        counter += 1;
+      }
+      updates.slug = slug;
+    }
+
+    const updated = await Course.findByIdAndUpdate(courseId, updates, { new: true });
+    return updated;
+  },
+
+  async delete(actor, courseId) {
+    if (actor.role !== "admin") {
+      throw new ApiError(403, "Only admins can delete courses");
+    }
+    const course = await Course.findByIdAndDelete(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    await Promise.all([
+      CourseSection.deleteMany({ courseId }),
+      Lesson.deleteMany({ courseId }),
+      Enrollment.deleteMany({ courseId }),
+      Review.deleteMany({ courseId }),
+      Wishlist.deleteMany({ courseId }),
+      CourseProgress.deleteMany({ courseId }),
+      OrderItem.deleteMany({ courseId }),
+    ]);
+    return course;
+  },
+
+  async publish(actor, courseId, isPublished) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    if (!isOwnerOrAdmin(actor, course.instructorId)) {
+      throw new ApiError(403, "You cannot update this course");
+    }
+    return Course.findByIdAndUpdate(courseId, { isPublished }, { new: true });
+  },
+
+  async adminList(query) {
+    const filter = {};
+    if (query.search) {
+      const regex = new RegExp(query.search, "i");
+      filter.$or = [{ title: regex }, { description: regex }, { shortDescription: regex }];
+    }
+    if (query.categoryId) filter.categoryId = query.categoryId;
+    if (query.level) filter.level = query.level;
+    if (query.instructorId) filter.instructorId = query.instructorId;
+    return paginate(Course, filter, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
+  },
+
+  async instructorCourses(instructorId, query) {
+    return paginate(Course, { instructorId }, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
+  },
+
+  async instructorStats(instructorId) {
+    const courses = await Course.find({ instructorId });
+    const courseIds = courses.map((course) => course._id);
+    const enrollments = await Enrollment.countDocuments({ courseId: { $in: courseIds } });
+    const ratings = await Review.aggregate([
+      { $match: { courseId: { $in: courseIds } } },
+      {
+        $group: {
+          _id: null,
+          ratingAvg: { $avg: "$rating" },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+    const revenue = await Order.aggregate([
+      { $match: { status: "paid" } },
+      {
+        $lookup: {
+          from: "orderitems",
+          localField: "_id",
+          foreignField: "orderId",
+          as: "items",
+        },
+      },
+      { $unwind: "$items" },
+      { $match: { "items.courseId": { $in: courseIds } } },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: "$amount" },
+        },
+      },
+    ]);
+    return {
+      totalCourses: courses.length,
+      totalStudents: enrollments,
+      revenue: revenue[0]?.revenue || 0,
+      ratingAvg: ratings[0]?.ratingAvg || 0,
+      ratingCount: ratings[0]?.ratingCount || 0,
+    };
+  },
+
+  async adminStats() {
+    const [users, courses, orders] = await Promise.all([
+      User.countDocuments(),
+      Course.countDocuments(),
+      Order.aggregate([
+        { $match: { status: "paid" } },
+        {
+          $group: {
+            _id: null,
+            revenue: { $sum: "$amount" },
+          },
+        },
+      ]),
+    ]);
+
+    return {
+      users,
+      courses,
+      revenue: orders[0]?.revenue || 0,
+    };
+  },
+};
+
+const sectionService = {
+  async create(actor, courseId, payload) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    if (!isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this course");
+
+    const sectionCount = await CourseSection.countDocuments({ courseId });
+    return CourseSection.create({
+      courseId,
+      title: payload.title,
+      order: payload.order || sectionCount + 1,
+    });
+  },
+
+  async update(actor, sectionId, payload) {
+    const section = await CourseSection.findById(sectionId);
+    if (!section) throw new ApiError(404, "Section not found");
+    const course = await Course.findById(section.courseId);
+    if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this section");
+    return CourseSection.findByIdAndUpdate(sectionId, payload, { new: true });
+  },
+
+  async delete(actor, sectionId) {
+    const section = await CourseSection.findById(sectionId);
+    if (!section) throw new ApiError(404, "Section not found");
+    const course = await Course.findById(section.courseId);
+    if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this section");
+    await Lesson.deleteMany({ sectionId });
+    return CourseSection.findByIdAndDelete(sectionId);
+  },
+};
+
+const lessonService = {
+  async create(actor, sectionId, payload) {
+    const section = await CourseSection.findById(sectionId);
+    if (!section) throw new ApiError(404, "Section not found");
+    const course = await Course.findById(section.courseId);
+    if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this course");
+    const lessonCount = await Lesson.countDocuments({ courseId: course._id, sectionId });
+    return Lesson.create({
+      courseId: course._id,
+      sectionId,
+      title: payload.title,
+      type: payload.type,
+      content: payload.content || "",
+      videoUrl: payload.videoUrl || "",
+      duration: payload.duration || 0,
+      isPreview: Boolean(payload.isPreview),
+      order: payload.order || lessonCount + 1,
+    });
+  },
+
+  async update(actor, lessonId, payload) {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) throw new ApiError(404, "Lesson not found");
+    const course = await Course.findById(lesson.courseId);
+    if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this lesson");
+    return Lesson.findByIdAndUpdate(lessonId, payload, { new: true });
+  },
+
+  async delete(actor, lessonId) {
+    const lesson = await Lesson.findById(lessonId);
+    if (!lesson) throw new ApiError(404, "Lesson not found");
+    const course = await Course.findById(lesson.courseId);
+    if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this lesson");
+    await CourseProgress.deleteMany({ lessonId });
+    return Lesson.findByIdAndDelete(lessonId);
+  },
+};
+
+const enrollmentService = {
+  async enroll(actor, payload) {
+    if (actor.role !== "student") {
+      throw new ApiError(403, "Only students can enroll in courses");
+    }
+
+    const course = await Course.findById(payload.courseId);
+    if (!course || !course.isPublished) throw new ApiError(404, "Course not found");
+
+    const existingEnrollment = await Enrollment.findOne({ userId: actor.id, courseId: payload.courseId });
+    if (existingEnrollment) {
+      return existingEnrollment;
+    }
+
+    const enrollment = await Enrollment.findOneAndUpdate(
+      { userId: actor.id, courseId: payload.courseId },
+      {
+        $setOnInsert: {
+          userId: actor.id,
+          courseId: payload.courseId,
+          status: "active",
+          progressPercent: 0,
+          completedLessonIds: [],
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    await Course.updateOne({ _id: payload.courseId }, { $inc: { enrollmentCount: 1 } });
+    return enrollment;
+  },
+
+  async myEnrollments(userId) {
+    const enrollments = await Enrollment.find({ userId }).sort({ createdAt: -1 });
+    return enrollments;
+  },
+
+  async updateProgress(actor, payload) {
+    const enrollment = await Enrollment.findOne({ userId: actor.id, courseId: payload.courseId });
+    if (!enrollment) throw new ApiError(404, "Enrollment not found");
+
+    const lesson = await Lesson.findById(payload.lessonId);
+    if (!lesson) throw new ApiError(404, "Lesson not found");
+
+    const progress = await CourseProgress.findOneAndUpdate(
+      { userId: actor.id, courseId: payload.courseId, lessonId: payload.lessonId },
+      {
+        $set: {
+          watchedSeconds: payload.watchedSeconds || 0,
+          isCompleted: Boolean(payload.isCompleted),
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    if (payload.isCompleted) {
+      if (!enrollment.completedLessonIds.some((item) => String(item) === String(payload.lessonId))) {
+        enrollment.completedLessonIds.push(payload.lessonId);
+      }
+    }
+
+    enrollment.lastViewedLessonId = payload.lessonId;
+
+    const totalLessons = await Lesson.countDocuments({ courseId: payload.courseId });
+    enrollment.progressPercent = totalLessons
+      ? Math.min(100, Math.round((enrollment.completedLessonIds.length / totalLessons) * 100))
+      : 0;
+    enrollment.status = enrollment.progressPercent === 100 ? "completed" : "active";
+    await enrollment.save();
+
+    return progress;
+  },
+
+  async getCourseProgress(actor, courseId) {
+    const records = await CourseProgress.find({ userId: actor.id, courseId }).sort({ createdAt: -1 });
+    return records;
+  },
+};
+
+const orderService = {
+  async create(actor, payload) {
+    if (actor.role !== "student") throw new ApiError(403, "Only students can place orders");
+
+    const courseIds = Array.from(new Set(payload.courseIds || []));
+    if (courseIds.length === 0) throw new ApiError(400, "At least one course is required");
+
+    const courses = await Course.find({ _id: { $in: courseIds } });
+    if (courses.length !== courseIds.length) throw new ApiError(404, "One or more courses were not found");
+
+    let subtotal = 0;
+    courses.forEach((course) => {
+      subtotal += resolveCoursePrice(course);
+    });
+
+    const coupon = payload.couponCode
+      ? await Coupon.findOne({ code: String(payload.couponCode).toUpperCase(), isActive: true })
+      : null;
+
+    let discount = 0;
+    if (coupon) {
+      discount =
+        coupon.type === "percent"
+          ? Math.round((subtotal * coupon.value) / 100)
+          : Math.min(subtotal, coupon.value);
+    }
+
+    const amount = Math.max(subtotal - discount, 0);
+    const order = await Order.create({
+      userId: actor.id,
+      amount,
+      currency: payload.currency || "INR",
+      status: "pending",
+      paymentProvider: payload.paymentProvider || "manual",
+      paymentIntentId: payload.paymentIntentId || "",
+      couponCode: coupon ? coupon.code : payload.couponCode || "",
+    });
+
+    await OrderItem.insertMany(
+      courses.map((course) => ({
+        orderId: order._id,
+        courseId: course._id,
+        priceAtPurchase: resolveCoursePrice(course),
+      }))
+    );
+
+    return order;
+  },
+
+  async myOrders(userId) {
+    return Order.find({ userId }).sort({ createdAt: -1 });
+  },
+
+  async listOrders(query) {
+    return paginate(Order, {}, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
+  },
+};
+
+const reviewService = {
+  async create(actor, courseId, payload) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+
+    const isVerifiedPurchase = Boolean(await Enrollment.findOne({ userId: actor.id, courseId }));
+    const review = await Review.findOneAndUpdate(
+      { userId: actor.id, courseId },
+      {
+        $set: {
+          rating: payload.rating,
+          title: payload.title || "",
+          comment: payload.comment || "",
+          isVerifiedPurchase,
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    await recalcCourseRatings(courseId);
+    return review;
+  },
+
+  async list(courseId, query) {
+    return paginate(Review, { courseId }, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
+  },
+
+  async remove(actor, reviewId) {
+    const review = await Review.findById(reviewId);
+    if (!review) throw new ApiError(404, "Review not found");
+    if (!isOwnerOrAdmin(actor, review.userId)) throw new ApiError(403, "You cannot delete this review");
+    await review.deleteOne();
+    await recalcCourseRatings(review.courseId);
+    return { success: true };
+  },
+};
+
+const wishlistService = {
+  async add(actor, courseId) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    return Wishlist.findOneAndUpdate(
+      { userId: actor.id, courseId },
+      { $setOnInsert: { userId: actor.id, courseId } },
+      { new: true, upsert: true }
+    );
+  },
+
+  async remove(actor, courseId) {
+    await Wishlist.deleteOne({ userId: actor.id, courseId });
+    return { success: true };
+  },
+
+  async list(actor) {
+    return Wishlist.find({ userId: actor.id }).sort({ createdAt: -1 });
+  },
+};
+
+const categoryService = {
+  async list() {
+    return Category.find({ isActive: true }).sort({ sortOrder: 1, createdAt: 1 });
+  },
+
+  async create(payload) {
+    const slug = payload.slug || slugify(payload.name);
+    return Category.create({ ...payload, slug });
+  },
+
+  async update(id, payload) {
+    const updates = { ...payload };
+    if (payload.name && !payload.slug) {
+      updates.slug = slugify(payload.name);
+    }
+    return Category.findByIdAndUpdate(id, updates, { new: true });
+  },
+};
+
+const couponService = {
+  async create(payload) {
+    return Coupon.create({
+      ...payload,
+      code: String(payload.code).toUpperCase(),
+      redeemedCount: payload.redeemedCount || 0,
+    });
+  },
+
+  async list() {
+    return Coupon.find({}).sort({ createdAt: -1 });
+  },
+
+  async validate(code) {
+    const coupon = await Coupon.findOne({ code: String(code).toUpperCase(), isActive: true });
+    if (!coupon) throw new ApiError(404, "Coupon not found");
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) throw new ApiError(400, "Coupon has expired");
+    if (coupon.redeemedCount >= coupon.maxRedemptions) throw new ApiError(400, "Coupon redemption limit reached");
+    return coupon;
+  },
+};
+
+const notificationService = {
+  async list(userId) {
+    return Notification.find({ userId }).sort({ createdAt: -1 });
+  },
+
+  async markRead(userId, id) {
+    const note = await Notification.findOneAndUpdate({ _id: id, userId }, { read: true }, { new: true });
+    if (!note) throw new ApiError(404, "Notification not found");
+    return note;
+  },
+
+  async markAllRead(userId) {
+    await Notification.updateMany({ userId, read: false }, { read: true });
+    return { success: true };
+  },
+};
+
+module.exports = {
+  sanitizeUser,
+  buildTokens,
+  authService,
+  userService,
+  courseService,
+  sectionService,
+  lessonService,
+  enrollmentService,
+  orderService,
+  reviewService,
+  wishlistService,
+  categoryService,
+  couponService,
+  notificationService,
+  upsertNotification,
+  recalcCourseRatings,
+  resolveCoursePrice,
+};

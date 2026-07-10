@@ -1,0 +1,12 @@
+.agents/
+.pnpm-store/
+node_modules/
+dist/
+.vite/
+.env
+.env.*
+Backend/node_modules/
+Backend/.env
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/

@@ -5,6 +5,10 @@
   "scripts": {
     "start": "cd Backend && npm start",
     "dev": "cd Backend && npm run dev",
+    "seed": "cd Backend && npm run seed",
+    "frontend:dev": "cd Frontend && npm run dev",
+    "frontend:build": "cd Frontend && npm run build",
+    "frontend:preview": "cd Frontend && npm run preview",
     "install-all": "npm install && cd Backend && npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
