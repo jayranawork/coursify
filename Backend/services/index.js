@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
@@ -12,6 +13,12 @@ const {
   deleteRefreshToken,
   deleteTokensByUserId,
 } = require("../utils/tokenStore");
+const {
+  createResetToken,
+  getResetToken,
+  markResetTokenUsed,
+  deleteResetTokensByUserId,
+} = require("../utils/passwordResetStore");
 const {
   User,
   Category,
@@ -49,17 +56,19 @@ const buildTokens = async (user) => {
     expiresIn: config.refreshTokenTtl,
   });
 
-  setRefreshToken(refreshToken, payload);
+  await setRefreshToken(refreshToken, payload);
 
   return { accessToken, refreshToken };
 };
 
-const verifyRefreshToken = (token) => {
-  try {
-    if (!token || !getRefreshToken(token)) {
-      throw new ApiError(401, "Refresh token is invalid");
-    }
+const buildResetToken = () => crypto.randomBytes(32).toString("hex");
 
+const verifyRefreshToken = async (token) => {
+  if (!token || !(await getRefreshToken(token))) {
+    throw new ApiError(401, "Refresh token is invalid");
+  }
+
+  try {
     return jwt.verify(token, config.jwtRefreshSecret);
   } catch (error) {
     throw new ApiError(401, "Refresh token is invalid or expired");
@@ -113,12 +122,120 @@ const recalcCourseRatings = async (courseId) => {
 const resolveCoursePrice = (course) =>
   course.discountPrice && course.discountPrice > 0 ? course.discountPrice : course.price;
 
+const parseBooleanQuery = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (value === true || value === false) return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  return undefined;
+};
+
+const getCouponDiscountAmount = (coupon, subtotal = 0) => {
+  const normalizedSubtotal = Math.max(0, Number(subtotal) || 0);
+  if (coupon.type === "percent") {
+    return Math.round((normalizedSubtotal * coupon.value) / 100);
+  }
+
+  return Math.min(normalizedSubtotal, coupon.value);
+};
+
+const pickCourseUpdates = (payload) => {
+  const updates = {};
+  const fields = [
+    "title",
+    "description",
+    "shortDescription",
+    "thumbnailUrl",
+    "previewVideoUrl",
+    "price",
+    "discountPrice",
+    "level",
+    "language",
+    "categoryId",
+    "tags",
+    "isPublished",
+    "isFeatured",
+  ];
+
+  fields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      updates[field] = payload[field];
+    }
+  });
+
+  return updates;
+};
+
+const pickSectionUpdates = (payload) => {
+  const updates = {};
+  if (payload.title !== undefined) updates.title = payload.title;
+  if (payload.order !== undefined) updates.order = payload.order;
+  return updates;
+};
+
+const pickLessonUpdates = (payload) => {
+  const updates = {};
+  const fields = ["title", "type", "content", "videoUrl", "duration", "isPreview", "order"];
+
+  fields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      updates[field] = payload[field];
+    }
+  });
+
+  return updates;
+};
+
+const pickCategoryPayload = (payload) => {
+  const picked = {};
+  const fields = ["name", "slug", "parentId", "sortOrder", "isActive"];
+
+  fields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      picked[field] = payload[field];
+    }
+  });
+
+  return picked;
+};
+
+const pickCouponPayload = (payload) => {
+  const picked = {};
+  const fields = ["code", "type", "value", "maxRedemptions", "redeemedCount", "expiresAt", "isActive"];
+
+  fields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      picked[field] = payload[field];
+    }
+  });
+
+  return picked;
+};
+
+const getActiveCouponByCode = async (code) => {
+  const coupon = await Coupon.findOne({ code: String(code).toUpperCase(), isActive: true });
+  if (!coupon) {
+    throw new ApiError(404, "Coupon not found");
+  }
+  if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+    throw new ApiError(400, "Coupon has expired");
+  }
+  if (coupon.redeemedCount >= coupon.maxRedemptions) {
+    throw new ApiError(400, "Coupon redemption limit reached");
+  }
+
+  return coupon;
+};
+
 const courseSearchFilter = (query) => {
   const filter = { isPublished: true };
 
   if (query.categoryId) filter.categoryId = query.categoryId;
   if (query.level) filter.level = query.level;
   if (query.instructorId) filter.instructorId = query.instructorId;
+  const isFeatured = parseBooleanQuery(query.isFeatured);
+  if (isFeatured !== undefined) filter.isFeatured = isFeatured;
   if (query.minPrice || query.maxPrice) {
     filter.price = {};
     if (query.minPrice) filter.price.$gte = Number(query.minPrice);
@@ -188,13 +305,13 @@ const authService = {
   },
 
   async refresh(refreshToken) {
-    const decoded = verifyRefreshToken(refreshToken);
+    const decoded = await verifyRefreshToken(refreshToken);
     const user = await User.findById(decoded.sub);
     if (!user || user.status !== "active") {
       throw new ApiError(401, "User is no longer active");
     }
 
-    deleteRefreshToken(refreshToken);
+    await deleteRefreshToken(refreshToken);
     const tokens = await buildTokens(user);
 
     return {
@@ -205,9 +322,73 @@ const authService = {
 
   async logout(refreshToken) {
     if (refreshToken) {
-      deleteRefreshToken(refreshToken);
+      await deleteRefreshToken(refreshToken);
     }
     return { success: true };
+  },
+
+  async requestPasswordReset(email) {
+    const normalizedEmail = String(email).toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail, status: "active" });
+
+    if (!user) {
+      return {
+        message: "If the account exists, a password reset link has been generated.",
+      };
+    }
+
+    const token = buildResetToken();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await createResetToken({
+      token,
+      userId: user._id,
+      email: normalizedEmail,
+      expiresAt,
+    });
+
+    const response = {
+      message: "Password reset link generated.",
+    };
+
+    if (process.env.NODE_ENV !== "production") {
+      response.resetToken = token;
+      response.resetUrl = `/reset-password?token=${token}`;
+    }
+
+    return response;
+  },
+
+  async resetPassword(payload) {
+    const resetRecord = await getResetToken(payload.token);
+    if (!resetRecord) {
+      throw new ApiError(400, "Reset token is invalid or expired");
+    }
+
+    if (resetRecord.usedAt) {
+      throw new ApiError(400, "Reset token has already been used");
+    }
+
+    if (resetRecord.expiresAt && resetRecord.expiresAt < new Date()) {
+      throw new ApiError(400, "Reset token is invalid or expired");
+    }
+
+    const user = await User.findById(resetRecord.userId);
+    if (!user || user.email !== resetRecord.email || user.status !== "active") {
+      throw new ApiError(400, "Reset token is invalid or expired");
+    }
+
+    user.passwordHash = await bcrypt.hash(payload.password, config.bcryptSaltRounds);
+    await user.save();
+
+    await Promise.all([
+      markResetTokenUsed(payload.token),
+      deleteTokensByUserId(user._id),
+      deleteResetTokensByUserId(user._id),
+    ]);
+
+    return {
+      message: "Password updated successfully",
+    };
   },
 
   async getCurrentUser(userId) {
@@ -312,7 +493,7 @@ const courseService = {
       throw new ApiError(403, "You cannot edit this course");
     }
 
-    const updates = { ...payload };
+    const updates = pickCourseUpdates(payload);
     if (payload.title && payload.title !== course.title) {
       const baseSlug = slugify(payload.title);
       let slug = baseSlug;
@@ -455,7 +636,7 @@ const sectionService = {
     if (!section) throw new ApiError(404, "Section not found");
     const course = await Course.findById(section.courseId);
     if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this section");
-    return CourseSection.findByIdAndUpdate(sectionId, payload, { new: true });
+    return CourseSection.findByIdAndUpdate(sectionId, pickSectionUpdates(payload), { new: true });
   },
 
   async delete(actor, sectionId) {
@@ -493,7 +674,7 @@ const lessonService = {
     if (!lesson) throw new ApiError(404, "Lesson not found");
     const course = await Course.findById(lesson.courseId);
     if (!course || !isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot edit this lesson");
-    return Lesson.findByIdAndUpdate(lessonId, payload, { new: true });
+    return Lesson.findByIdAndUpdate(lessonId, pickLessonUpdates(payload), { new: true });
   },
 
   async delete(actor, lessonId) {
@@ -600,16 +781,24 @@ const orderService = {
       subtotal += resolveCoursePrice(course);
     });
 
-    const coupon = payload.couponCode
-      ? await Coupon.findOne({ code: String(payload.couponCode).toUpperCase(), isActive: true })
-      : null;
-
     let discount = 0;
-    if (coupon) {
-      discount =
-        coupon.type === "percent"
-          ? Math.round((subtotal * coupon.value) / 100)
-          : Math.min(subtotal, coupon.value);
+    let couponCode = "";
+    if (payload.couponCode) {
+      const coupon = await getActiveCouponByCode(payload.couponCode);
+      const redemption = await Coupon.updateOne(
+        {
+          _id: coupon._id,
+          redeemedCount: { $lt: coupon.maxRedemptions },
+        },
+        { $inc: { redeemedCount: 1 } }
+      );
+
+      if (!redemption.modifiedCount) {
+        throw new ApiError(400, "Coupon redemption limit reached");
+      }
+
+      discount = getCouponDiscountAmount(coupon, subtotal);
+      couponCode = coupon.code;
     }
 
     const amount = Math.max(subtotal - discount, 0);
@@ -620,7 +809,7 @@ const orderService = {
       status: "pending",
       paymentProvider: payload.paymentProvider || "manual",
       paymentIntentId: payload.paymentIntentId || "",
-      couponCode: coupon ? coupon.code : payload.couponCode || "",
+      couponCode,
     });
 
     await OrderItem.insertMany(
@@ -707,12 +896,13 @@ const categoryService = {
   },
 
   async create(payload) {
-    const slug = payload.slug || slugify(payload.name);
-    return Category.create({ ...payload, slug });
+    const categoryPayload = pickCategoryPayload(payload);
+    const slug = categoryPayload.slug || slugify(categoryPayload.name);
+    return Category.create({ ...categoryPayload, slug });
   },
 
   async update(id, payload) {
-    const updates = { ...payload };
+    const updates = pickCategoryPayload(payload);
     if (payload.name && !payload.slug) {
       updates.slug = slugify(payload.name);
     }
@@ -722,10 +912,11 @@ const categoryService = {
 
 const couponService = {
   async create(payload) {
+    const couponPayload = pickCouponPayload(payload);
     return Coupon.create({
-      ...payload,
-      code: String(payload.code).toUpperCase(),
-      redeemedCount: payload.redeemedCount || 0,
+      ...couponPayload,
+      code: String(couponPayload.code).toUpperCase(),
+      redeemedCount: couponPayload.redeemedCount || 0,
     });
   },
 
@@ -733,12 +924,15 @@ const couponService = {
     return Coupon.find({}).sort({ createdAt: -1 });
   },
 
-  async validate(code) {
-    const coupon = await Coupon.findOne({ code: String(code).toUpperCase(), isActive: true });
-    if (!coupon) throw new ApiError(404, "Coupon not found");
-    if (coupon.expiresAt && coupon.expiresAt < new Date()) throw new ApiError(400, "Coupon has expired");
-    if (coupon.redeemedCount >= coupon.maxRedemptions) throw new ApiError(400, "Coupon redemption limit reached");
-    return coupon;
+  async validate(code, subtotal = 0) {
+    const coupon = await getActiveCouponByCode(code);
+    const discountAmount = getCouponDiscountAmount(coupon, subtotal);
+    return {
+      coupon,
+      subtotal: Math.max(0, Number(subtotal) || 0),
+      discountAmount,
+      total: Math.max(0, Math.max(0, Number(subtotal) || 0) - discountAmount),
+    };
   },
 };
 

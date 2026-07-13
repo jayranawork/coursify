@@ -12,6 +12,8 @@ import { CourseDetail } from "@/pages/public/CourseDetail";
 import { Checkout } from "@/pages/public/Checkout";
 import { Login } from "@/pages/public/Login";
 import { Register } from "@/pages/public/Register";
+import { ForgotPassword } from "@/pages/public/ForgotPassword";
+import { ResetPassword } from "@/pages/public/ResetPassword";
 
 import { Dashboard as StudentDashboard } from "@/pages/student/Dashboard";
 import { MyCourses as StudentCourses } from "@/pages/student/MyCourses";
@@ -42,6 +44,8 @@ export function AppRoutes() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
       <Route

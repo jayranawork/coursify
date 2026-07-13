@@ -20,6 +20,15 @@ const authLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(128),
+});
+
 const authRefreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -27,7 +36,10 @@ const authRefreshSchema = z.object({
 const userUpdateSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   email: z.string().email().optional(),
-  password: z.string().min(8).max(128).optional(),
+  password: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().min(8).max(128).optional()
+  ),
   avatar: z.string().url().optional().or(z.literal("")),
   bio: z.string().max(500).optional(),
 });
@@ -119,6 +131,18 @@ const couponSchema = z.object({
 
 const couponValidateSchema = z.object({
   code: z.string().min(2).max(40),
+  subtotal: z.coerce.number().min(0).optional(),
+});
+
+const uploadImageSchema = z.object({
+  dataUrl: z.string().min(1),
+  folder: z.enum(["avatars", "courseThumbnails"]).optional(),
+  publicId: z.string().min(1).max(120).optional(),
+});
+
+const uploadPublicImageSchema = z.object({
+  dataUrl: z.string().min(1),
+  publicId: z.string().min(1).max(120).optional(),
 });
 
 module.exports = {
@@ -126,6 +150,8 @@ module.exports = {
   pagination,
   authRegisterSchema,
   authLoginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   authRefreshSchema,
   userUpdateSchema,
   userStatusSchema,
@@ -141,4 +167,6 @@ module.exports = {
   categorySchema,
   couponSchema,
   couponValidateSchema,
+  uploadImageSchema,
+  uploadPublicImageSchema,
 };

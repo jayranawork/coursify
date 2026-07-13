@@ -2,6 +2,10 @@
 
 A full-stack web application for online course management and learning.
 
+## Working Notes
+
+- See [things-to-implement/README.md](./things-to-implement/README.md) for the current implementation checklist and task breakdown.
+
 ## Features
 
 ### Admin Features

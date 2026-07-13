@@ -8,6 +8,7 @@ import { authApi, setStoredRefreshToken } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Card, Input, Label } from "@/components/ui";
 import { getApiErrorMessage } from "@/services/api";
+import { Link } from "react-router-dom";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -61,6 +62,11 @@ export function Login() {
           <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
             Sign in
           </Button>
+          <div className="text-center text-sm text-slate-500">
+            <Link to="/forgot-password" className="font-medium text-slate-900 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
         </form>
       </Card>
     </div>

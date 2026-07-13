@@ -8,6 +8,7 @@ import { Button, Card, Input, Label, Badge } from "@/components/ui";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
+import { getApiErrorMessage } from "@/services/api";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -39,7 +40,7 @@ export function CategoryManagement() {
       form.reset({ name: "", slug: "" });
       categoriesQuery.refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to create category");
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -49,7 +50,7 @@ export function CategoryManagement() {
       toast.success("Category updated");
       categoriesQuery.refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update category");
+      toast.error(getApiErrorMessage(error));
     }
   };
 

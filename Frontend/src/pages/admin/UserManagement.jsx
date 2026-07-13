@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDate } from "@/utils/formatDate";
+import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
 
 export function UserManagement() {
@@ -32,7 +33,7 @@ export function UserManagement() {
       await updateStatus.mutateAsync({ id: user._id, status: next });
       toast.success(`User ${next === "blocked" ? "blocked" : "unblocked"}`);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update user");
+      toast.error(getApiErrorMessage(error));
     }
   };
 

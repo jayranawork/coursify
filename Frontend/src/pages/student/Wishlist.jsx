@@ -4,6 +4,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { findCourseById, normalizeId } from "@/utils/courseUtils";
+import { getApiErrorMessage } from "@/services/api";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +27,7 @@ export function Wishlist() {
       await toggleWishlist.mutateAsync({ courseId, liked: true });
       toast.success("Removed from wishlist");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update wishlist");
+      toast.error(getApiErrorMessage(error));
     }
   };
 

@@ -208,6 +208,32 @@ const notificationSchema = new Schema(
 
 notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
 
+const refreshTokenSchema = new Schema(
+  {
+    tokenHash: { type: String, required: true, unique: true, index: true },
+    userId: { type: ObjectId, required: true, index: true },
+    role: { type: String, required: true, enum: ["student", "instructor", "admin"] },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true }
+);
+
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+const passwordResetTokenSchema = new Schema(
+  {
+    tokenHash: { type: String, required: true, unique: true, index: true },
+    userId: { type: ObjectId, required: true, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
+    expiresAt: { type: Date, required: true },
+    usedAt: { type: Date, default: null },
+  },
+  { timestamps: true }
+);
+
+passwordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 const Course = mongoose.models.Course || mongoose.model("Course", courseSchema);
@@ -221,6 +247,9 @@ const Wishlist = mongoose.models.Wishlist || mongoose.model("Wishlist", wishlist
 const CourseProgress = mongoose.models.CourseProgress || mongoose.model("CourseProgress", courseProgressSchema);
 const Coupon = mongoose.models.Coupon || mongoose.model("Coupon", couponSchema);
 const Notification = mongoose.models.Notification || mongoose.model("Notification", notificationSchema);
+const RefreshToken = mongoose.models.RefreshToken || mongoose.model("RefreshToken", refreshTokenSchema);
+const PasswordResetToken =
+  mongoose.models.PasswordResetToken || mongoose.model("PasswordResetToken", passwordResetTokenSchema);
 
 module.exports = {
   User,
@@ -236,4 +265,6 @@ module.exports = {
   CourseProgress,
   Coupon,
   Notification,
+  RefreshToken,
+  PasswordResetToken,
 };

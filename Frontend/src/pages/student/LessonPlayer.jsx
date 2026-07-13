@@ -9,6 +9,8 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { findCourseById, getEnrollmentForCourse, groupLessonsBySection, normalizeId } from "@/utils/courseUtils";
+import { stripHtml } from "@/utils/sanitizeHtml";
+import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
 
 export function LessonPlayer() {
@@ -60,7 +62,7 @@ export function LessonPlayer() {
       toast.success("Lesson marked as complete");
       progressQuery.refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update progress");
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -120,8 +122,8 @@ export function LessonPlayer() {
             ) : currentLesson.type === "pdf" ? (
               <iframe title={currentLesson.title} src={currentLesson.content || currentLesson.videoUrl} className="h-[520px] w-full bg-white" />
             ) : (
-              <div className="prose prose-invert max-w-none p-6">
-                <div dangerouslySetInnerHTML={{ __html: currentLesson.content || "<p>No content available.</p>" }} />
+              <div className="prose prose-invert max-w-none p-6 whitespace-pre-line">
+                <div>{stripHtml(currentLesson.content) || "No content available."}</div>
               </div>
             )}
           </div>

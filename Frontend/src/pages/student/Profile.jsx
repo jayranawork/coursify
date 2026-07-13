@@ -1,18 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useCurrentUser, useUpdateProfile } from "@/hooks/useUsers";
 import { useAuth } from "@/hooks/useAuth";
-import { Button, Card, Input, Label, Textarea, Badge } from "@/components/ui";
+import { Button, Card, Input, Label, Textarea, Badge, Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
+import { uploadApi, getApiErrorMessage } from "@/services/api";
+import { fileToDataUrl } from "@/utils/fileToDataUrl";
 
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  password: z.string().optional(),
+  password: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().min(8, "Password must be at least 8 characters").optional()
+  ),
   avatar: z.string().optional(),
   bio: z.string().optional(),
 });
@@ -21,6 +26,7 @@ export function Profile() {
   const meQuery = useCurrentUser();
   const updateProfile = useUpdateProfile();
   const { updateUser } = useAuth();
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: { name: "", email: "", password: "", avatar: "", bio: "" },
@@ -38,16 +44,55 @@ export function Profile() {
     }
   }, [meQuery.data, form]);
 
+  const avatarValue = form.watch("avatar") || meQuery.data?.avatar || "";
+
   if (meQuery.isLoading) return <LoadingSpinner />;
   if (meQuery.isError) return <ErrorState description="We could not load your profile." onRetry={() => meQuery.refetch()} />;
 
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const uploaded = await uploadApi.uploadImage({
+        dataUrl,
+        folder: "avatars",
+        publicId: `avatar-${Date.now()}`,
+      });
+      form.setValue("avatar", uploaded.url, { shouldDirty: true, shouldValidate: true });
+
+      const savedProfile = await updateProfile.mutateAsync({ avatar: uploaded.url });
+      updateUser(savedProfile);
+
+      toast.success("Avatar uploaded and saved");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    } finally {
+      setIsUploadingAvatar(false);
+      event.target.value = "";
+    }
+  };
+
   const submit = form.handleSubmit(async (values) => {
     try {
-      const data = await updateProfile.mutateAsync(values);
+      const payload = { ...values };
+      if (!payload.password) {
+        delete payload.password;
+      }
+
+      const data = await updateProfile.mutateAsync(payload);
       updateUser(data);
       toast.success("Profile updated");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update profile");
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -56,10 +101,18 @@ export function Profile() {
       <Card className="p-6">
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Profile</p>
-          <h1 className="text-3xl font-black text-slate-950">{meQuery.data?.name}</h1>
-          <Badge variant="secondary" className="w-fit">
-            {meQuery.data?.role}
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={avatarValue} alt={meQuery.data?.name || "User"} />
+              <AvatarFallback>{(meQuery.data?.name || "U").slice(0, 1).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-3xl font-black text-slate-950">{meQuery.data?.name}</h1>
+              <Badge variant="secondary" className="w-fit">
+                {meQuery.data?.role}
+              </Badge>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -74,8 +127,8 @@ export function Profile() {
           <Field label="Password" error={form.formState.errors.password?.message}>
             <Input type="password" {...form.register("password")} placeholder="Leave blank to keep current password" />
           </Field>
-          <Field label="Avatar URL">
-            <Input {...form.register("avatar")} />
+          <Field label="Upload avatar">
+            <Input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/avif" onChange={handleAvatarUpload} disabled={isUploadingAvatar} />
           </Field>
           <div className="md:col-span-2">
             <Field label="Bio">

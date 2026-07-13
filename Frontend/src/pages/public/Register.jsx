@@ -13,7 +13,6 @@ const schema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["student", "instructor"]),
-  avatar: z.string().optional(),
   bio: z.string().optional(),
 });
 
@@ -27,7 +26,6 @@ export function Register() {
       email: "",
       password: "",
       role: "student",
-      avatar: "",
       bio: "",
     },
   });
@@ -72,9 +70,6 @@ export function Register() {
               <option value="student">Student</option>
               <option value="instructor">Instructor</option>
             </Select>
-          </Field>
-          <Field label="Avatar URL">
-            <Input placeholder="https://..." {...form.register("avatar")} />
           </Field>
           <Field label="Bio">
             <Textarea rows={3} placeholder="Tell us about yourself" {...form.register("bio")} />

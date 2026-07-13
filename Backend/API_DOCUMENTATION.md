@@ -91,7 +91,7 @@ Business logic:
 - prevents duplicate email registration
 - hashes password with bcrypt
 - creates access and refresh tokens
-- stores refresh token in the in-memory token store
+- stores refresh token in MongoDB for persistent refresh sessions
 
 Request body:
 
@@ -122,6 +122,45 @@ Request body:
 {
   "email": "aman@example.com",
   "password": "StrongPassword123!"
+}
+```
+
+### POST `/api/auth/forgot-password`
+
+Starts the password recovery flow.
+
+Business logic:
+
+- looks up the user by email
+- generates a one-time reset token
+- stores only the token hash in MongoDB with a TTL
+- in non-production, returns the raw reset token so the flow can be tested without email delivery
+
+Request body:
+
+```json
+{
+  "email": "aman@example.com"
+}
+```
+
+### POST `/api/auth/reset-password`
+
+Resets the password using a valid reset token.
+
+Business logic:
+
+- validates the reset token
+- checks token expiry and reuse
+- hashes the new password
+- clears the user’s existing refresh tokens
+
+Request body:
+
+```json
+{
+  "token": "reset-token-from-email-or-dev-response",
+  "password": "NewStrongPassword123!"
 }
 ```
 
@@ -223,6 +262,38 @@ Request body:
 }
 ```
 
+## Uploads API
+
+### POST `/api/uploads/image`
+
+Uploads an image to Cloudinary and returns the hosted URL.
+
+Role:
+
+- any authenticated user
+
+Business logic:
+
+- accepts a base64 image data URL
+- uploads the image to Cloudinary
+- returns the hosted URL and metadata
+- does not store binary file data in MongoDB
+
+Request body:
+
+```json
+{
+  "dataUrl": "data:image/png;base64,...",
+  "folder": "avatars",
+  "publicId": "avatar-123"
+}
+```
+
+Allowed folders:
+
+- `avatars`
+- `courseThumbnails`
+
 ## Courses API
 
 ### GET `/api/courses`
@@ -239,10 +310,12 @@ Query params:
 - `minPrice`
 - `maxPrice`
 - `search`
+- `isFeatured`
 
 Business logic:
 
 - filters only published courses
+- supports featured-course filtering
 - supports pagination and search
 
 ### GET `/api/courses/:slug`
@@ -520,7 +593,9 @@ Business logic:
 
 - validates the course list
 - calculates subtotal using discount price if available
-- applies coupon if provided
+- validates the coupon if provided
+- applies the computed coupon discount if valid
+- increments coupon redemption count when a coupon is used
 - creates order and order items
 - leaves order in `pending` status
 
@@ -681,12 +756,30 @@ Business logic:
 - checks active flag
 - checks expiry
 - checks redemption limit
+- returns the computed discount amount for the provided subtotal
 
 Request body:
 
 ```json
 {
-  "code": "WELCOME10"
+  "code": "WELCOME10",
+  "subtotal": 4999
+}
+```
+
+Response:
+
+```json
+{
+  "coupon": {
+    "_id": "665f...",
+    "code": "WELCOME10",
+    "type": "percent",
+    "value": 10
+  },
+  "subtotal": 4999,
+  "discountAmount": 500,
+  "total": 4499
 }
 ```
 
@@ -781,6 +874,7 @@ The backend currently uses these collections:
 - `courseprogress`
 - `coupons`
 - `notifications`
+- `refreshtokens`
 
 ## Environment Variables
 
@@ -792,10 +886,14 @@ JWT_ACCESS_SECRET=your-long-secret
 JWT_REFRESH_SECRET=your-long-secret
 PORT=3002
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ## Notes
 
-- Refresh tokens are currently stored in memory.
+- Refresh tokens are stored in MongoDB and rotated on refresh.
+- Image uploads now go through Cloudinary.
 - The backend is designed to be extended into a more complete LMS with payments, media upload, and analytics later.
 - Legacy MVP route files exist in `Backend/routers`, but they are not used by the current app bootstrap.

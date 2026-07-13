@@ -22,7 +22,23 @@ export function setStoredRefreshToken(token) {
 }
 
 function getErrorMessage(error) {
-  return error?.response?.data?.message || error?.message || "Something went wrong";
+  const response = error?.response?.data || {};
+  const validationErrors = Array.isArray(response.errors) ? response.errors : [];
+
+  if (validationErrors.length > 0) {
+    const messages = validationErrors
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return item?.message || item?.msg || item?.reason || "";
+      })
+      .filter(Boolean);
+
+    if (messages.length > 0) {
+      return messages.join(". ");
+    }
+  }
+
+  return response.message || error?.message || "Something went wrong";
 }
 
 export function getApiErrorMessage(error) {
@@ -131,6 +147,14 @@ export const authApi = {
       await api.post("/auth/logout", { refreshToken }, { skipAuthRefresh: true });
     }
     setStoredRefreshToken(null);
+  },
+  async forgotPassword(payload) {
+    const response = await api.post("/auth/forgot-password", payload, { skipAuthRefresh: true });
+    return unwrap(response);
+  },
+  async resetPassword(payload) {
+    const response = await api.post("/auth/reset-password", payload, { skipAuthRefresh: true });
+    return unwrap(response);
   },
 };
 
@@ -311,8 +335,8 @@ export const couponApi = {
     const response = await api.post("/coupons", payload);
     return unwrap(response);
   },
-  async validate(code) {
-    const response = await api.post("/coupons/validate", { code });
+  async validate(code, subtotal = 0) {
+    const response = await api.post("/coupons/validate", { code, subtotal });
     return unwrap(response);
   },
 };
@@ -351,6 +375,17 @@ export const dashboardApi = {
   },
   async adminCourses(query = {}) {
     const response = await api.get("/admin/courses", { params: query });
+    return unwrap(response);
+  },
+};
+
+export const uploadApi = {
+  async uploadImage({ dataUrl, folder = "avatars", publicId }) {
+    const response = await api.post("/uploads/image", { dataUrl, folder, publicId });
+    return unwrap(response);
+  },
+  async uploadPublicImage({ dataUrl, publicId }) {
+    const response = await api.post("/uploads/public-image", { dataUrl, publicId }, { skipAuthRefresh: true });
     return unwrap(response);
   },
 };

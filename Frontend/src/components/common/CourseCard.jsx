@@ -11,60 +11,81 @@ const PLACEHOLDER =
 export function CourseCard({ course, href, actionLabel = "View Course", onAction }) {
   const price = course.discountPrice && course.discountPrice > 0 ? course.discountPrice : course.price;
   const hasDiscount = course.discountPrice && course.discountPrice > 0 && course.discountPrice < course.price;
+  const lessonCount = course.lessonCount || course.lessonsCount || course.sections?.reduce((count, section) => count + (section.lessons?.length || 0), 0) || 0;
 
   return (
-    <Card className="group overflow-hidden transition-transform duration-300 hover:-translate-y-1">
-      <div className="relative">
+    <Card className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative isolate aspect-[4/3] overflow-hidden bg-slate-900">
         <img
           src={course.thumbnailUrl || PLACEHOLDER}
           alt={course.title}
-          className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute left-3 top-3 flex gap-2">
-          {course.level ? <Badge variant="secondary">{course.level}</Badge> : null}
-          {course.isPublished ? <Badge variant="success">Published</Badge> : <Badge variant="outline">Draft</Badge>}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/5" />
+        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+          {course.level ? (
+            <Badge variant="secondary" className="rounded-full border-0 bg-white/95 text-slate-800 shadow-sm backdrop-blur">
+              {course.level}
+            </Badge>
+          ) : null}
+          {course.isPublished ? (
+            <Badge variant="success" className="rounded-full border-0 bg-emerald-100 text-emerald-700 shadow-sm backdrop-blur">
+              Published
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="rounded-full bg-white/90 shadow-sm backdrop-blur">
+              Draft
+            </Badge>
+          )}
         </div>
       </div>
+
       <div className="flex h-full flex-col gap-4 p-5">
-        <div>
-          <h3 className="line-clamp-2 text-lg font-semibold text-slate-900">{course.title}</h3>
-          <p className="mt-1 text-sm text-slate-500">{truncate(course.shortDescription || course.description, 110)}</p>
+        <div className="space-y-2">
+          <h3 className="line-clamp-2 text-[1.05rem] font-semibold leading-snug text-slate-950">
+            {course.title}
+          </h3>
+          <p className="line-clamp-2 text-sm leading-6 text-slate-500">
+            {truncate(course.shortDescription || course.description, 96)}
+          </p>
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
-          <span>{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span>
-          <span className="flex items-center gap-1">
+          <span className="truncate">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span>
+          <span className="flex shrink-0 items-center gap-1">
             <StarRating value={course.ratingAvg || course.rating || 0} />
             <span>{Number(course.ratingAvg || course.rating || 0).toFixed(1)}</span>
           </span>
         </div>
 
         <div className="flex items-center justify-between text-sm text-slate-500">
-          <span className="flex items-center gap-1">
-            <BookOpen className="h-4 w-4" />
-            {course.lessonCount || course.lessonsCount || course.sections?.length || 0} lessons
+          <span className="flex items-center gap-1.5">
+            <BookOpen className="h-4 w-4 shrink-0" />
+            <span>{lessonCount} lessons</span>
           </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
+          <span className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 shrink-0" />
             {course.enrollmentCount || 0}
           </span>
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3">
+        <div className="mt-auto flex items-center justify-between gap-3 pt-1">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900">{formatPrice(price)}</span>
+              <span className="text-xl font-bold tracking-tight text-slate-950">{formatPrice(price)}</span>
               {hasDiscount ? (
                 <span className="text-sm text-slate-400 line-through">{formatPrice(course.price)}</span>
               ) : null}
             </div>
           </div>
           {href ? (
-            <Button asChild>
+            <Button asChild className="rounded-full px-4">
               <Link to={href}>{actionLabel}</Link>
             </Button>
           ) : (
-            <Button onClick={onAction}>{actionLabel}</Button>
+            <Button onClick={onAction} className="rounded-full px-4">
+              {actionLabel}
+            </Button>
           )}
         </div>
       </div>

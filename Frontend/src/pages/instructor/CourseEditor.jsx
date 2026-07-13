@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { courseApi } from "@/services/api";
+import { courseApi, getApiErrorMessage } from "@/services/api";
 import { useInstructorCourses } from "@/hooks/useCourses";
 import { useCategories } from "@/hooks/useCategories";
 import { Button, Card, Input, Label, Select, Textarea, Badge } from "@/components/ui";
@@ -12,6 +12,8 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Plus, Trash2 } from "lucide-react";
+import { uploadApi } from "@/services/api";
+import { fileToDataUrl } from "@/utils/fileToDataUrl";
 
 const lessonSchema = z.object({
   _id: z.string().optional(),
@@ -54,6 +56,7 @@ export function CourseEditor() {
   const isEdit = Boolean(id);
   const coursesQuery = useInstructorCourses({ limit: 100 });
   const categoriesQuery = useCategories();
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const editorForm = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -112,6 +115,34 @@ export function CourseEditor() {
   if (coursesQuery.isError || categoriesQuery.isError) return <ErrorState description="We could not load instructor courses." onRetry={() => coursesQuery.refetch()} />;
   if (isEdit && !courseMatch) return <EmptyState title="Course not found" description="We could not locate this course for editing." />;
 
+  const handleThumbnailUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingThumbnail(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const uploaded = await uploadApi.uploadImage({
+        dataUrl,
+        folder: "courseThumbnails",
+        publicId: `course-thumbnail-${Date.now()}`,
+      });
+      editorForm.setValue("thumbnailUrl", uploaded.url, { shouldDirty: true, shouldValidate: true });
+      toast.success("Thumbnail uploaded");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    } finally {
+      setIsUploadingThumbnail(false);
+      event.target.value = "";
+    }
+  };
+
   const submit = editorForm.handleSubmit(async (values) => {
     try {
       const tags = (values.tagsText || "")
@@ -169,7 +200,7 @@ export function CourseEditor() {
       toast.success(isEdit ? "Course updated" : "Course created");
       navigate("/instructor/courses");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to save course");
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -225,6 +256,9 @@ export function CourseEditor() {
             </div>
             <Field label="Thumbnail URL">
               <Input {...editorForm.register("thumbnailUrl")} />
+            </Field>
+            <Field label="Upload thumbnail">
+              <Input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/avif" onChange={handleThumbnailUpload} disabled={isUploadingThumbnail} />
             </Field>
             <Field label="Preview video URL">
               <Input {...editorForm.register("previewVideoUrl")} />

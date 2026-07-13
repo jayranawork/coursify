@@ -4,6 +4,7 @@ const cors = require("cors");
 
 const config = require("./config");
 const { notFound, errorHandler } = require("./middlewares/error");
+const securityHeaders = require("./middlewares/security");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -12,6 +13,7 @@ const enrollmentRoutes = require("./routes/enrollments");
 const orderRoutes = require("./routes/orders");
 const socialRoutes = require("./routes/social");
 const dashboardRoutes = require("./routes/dashboards");
+const uploadRoutes = require("./routes/uploads");
 
 const app = express();
 
@@ -21,7 +23,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(securityHeaders);
+app.use(express.json({ limit: "10mb" }));
 
 app.get("/", (req, res) => {
   res.json({
@@ -37,6 +40,7 @@ app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api", socialRoutes);
 app.use("/api", dashboardRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

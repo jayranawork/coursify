@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDate } from "@/utils/formatDate";
+import { getApiErrorMessage } from "@/services/api";
 
 const schema = z.object({
   code: z.string().min(2),
@@ -34,7 +35,7 @@ export function CouponManagement() {
       form.reset({ code: "", type: "percent", value: 0 });
       couponsQuery.refetch();
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to create coupon");
+      toast.error(getApiErrorMessage(error));
     }
   });
 

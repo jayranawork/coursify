@@ -14,6 +14,7 @@ const {
   couponService,
   notificationService,
 } = require("../services");
+const uploadService = require("../services/upload");
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 
@@ -33,6 +34,14 @@ const authController = {
   logout: asyncHandler(async (req, res) => {
     await authService.logout(req.body.refreshToken);
     send(res, { success: true });
+  }),
+  forgotPassword: asyncHandler(async (req, res) => {
+    const data = await authService.requestPasswordReset(req.body.email);
+    send(res, data);
+  }),
+  resetPassword: asyncHandler(async (req, res) => {
+    const data = await authService.resetPassword(req.body);
+    send(res, data);
   }),
 };
 
@@ -213,7 +222,7 @@ const couponController = {
     send(res, data);
   }),
   validate: asyncHandler(async (req, res) => {
-    const data = await couponService.validate(req.body.code);
+    const data = await couponService.validate(req.body.code, req.body.subtotal);
     send(res, data);
   }),
 };
@@ -230,6 +239,17 @@ const notificationController = {
   markAllRead: asyncHandler(async (req, res) => {
     const data = await notificationService.markAllRead(req.user.id);
     send(res, data);
+  }),
+};
+
+const uploadController = {
+  image: asyncHandler(async (req, res) => {
+    const data = await uploadService.uploadImage(req.user, req.body);
+    send(res, data, 201);
+  }),
+  publicImage: asyncHandler(async (req, res) => {
+    const data = await uploadService.uploadPublicAvatar(req.body);
+    send(res, data, 201);
   }),
 };
 
@@ -272,6 +292,7 @@ module.exports = {
   categoryController,
   couponController,
   notificationController,
+  uploadController,
   instructorController,
   adminController,
 };

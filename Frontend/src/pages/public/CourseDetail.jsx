@@ -25,6 +25,8 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { StarRating } from "@/components/common/StarRating";
 import { formatPrice } from "@/utils/formatPrice";
 import { groupLessonsBySection, isCourseInWishlist, isEnrollmentForCourse, normalizeId } from "@/utils/courseUtils";
+import { stripHtml } from "@/utils/sanitizeHtml";
+import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
 import { courseApi } from "@/services/api";
 
@@ -82,7 +84,7 @@ export function CourseDetail() {
       await toggleWishlist.mutateAsync({ courseId, liked });
       toast.success(liked ? "Removed from wishlist" : "Added to wishlist");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to update wishlist");
+      toast.error(getApiErrorMessage(error));
     }
   };
 
@@ -92,8 +94,8 @@ export function CourseDetail() {
       toast.success("Review submitted");
       reviewForm.reset();
       reviewsQuery.refetch();
-    } catch {
-      toast.error("Unable to submit review");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
     }
   });
 
@@ -169,10 +171,9 @@ export function CourseDetail() {
             <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
               <Card className="p-6">
                 <h2 className="text-xl font-bold">What you will learn</h2>
-                <div
-                  className="prose prose-slate mt-4 max-w-none"
-                  dangerouslySetInnerHTML={{ __html: course.description }}
-                />
+                <div className="prose prose-slate mt-4 max-w-none whitespace-pre-line text-slate-700">
+                  {stripHtml(course.description) || "Course details will appear here soon."}
+                </div>
               </Card>
               <Card className="p-6">
                 <h3 className="font-semibold">Course facts</h3>

@@ -73,7 +73,7 @@ export function useCheckout(initialCourses = []) {
     setCouponError("");
 
     try {
-      const payload = await couponApi.validate(nextCode);
+      const payload = await couponApi.validate(nextCode, subtotal);
       const amount = extractDiscountAmount(payload);
       setDiscountCode(nextCode);
       setDiscountAmount(amount);
