@@ -1,133 +1,162 @@
-# Coursify - Online Learning Platform
+# Coursify
 
-A full-stack web application for online course management and learning.
+Coursify is a full-stack online learning platform built as a growing client-ready course website.
 
-## Working Notes
-
-- See [things-to-implement/README.md](./things-to-implement/README.md) for the current implementation checklist and task breakdown.
-
-## Features
-
-### Admin Features
-- Admin authentication (signup/signin)
-- Course management:
-  - Create new courses
-  - View all courses
-  - View specific course details
-  - Update course information
-  - Delete courses
-
-### User Features
-- User authentication (signup/signin)
-- Course browsing
-- Course purchasing
-- Course reviews and ratings
-
-## Tech Stack
+## Current Stack
 
 ### Backend
+
 - Node.js
-- Express.js
+- Express
 - MongoDB
-- JWT Authentication
+- Mongoose
+- JWT authentication
+- Zod validation
+- bcryptjs
 
 ### Frontend
-- HTML
-- CSS
-- JavaScript (Vanilla)
 
-## Project Structure
+- React
+- Vite
+- React Router
+- React Hook Form
+- Zod
+- Zustand
+- TanStack Query
+- Axios
+- Tailwind CSS
 
+### Media and storage
+
+- Cloudinary for images
+- MongoDB for application data
+- AWS S3 planned for PDFs and videos
+
+## What Coursify Already Has
+
+### Auth and account flow
+
+- Register
+- Login
+- Logout
+- Refresh token rotation
+- Forgot password
+- Reset password
+- Role-based access for student, instructor, and admin
+
+### Course platform
+
+- Public course list
+- Public course detail page
+- Course creation and editing
+- Sections and lessons
+- Course publishing
+- Instructor dashboard
+- Student dashboard
+- Admin dashboard
+- Wishlist
+- Reviews
+- Notifications
+
+### Payments and order flow
+
+- Order creation
+- Coupon validation and redemption tracking
+- Checkout foundation
+- Payment integration planned next
+
+### File uploads
+
+- Cloudinary image uploads for avatars
+- Cloudinary image uploads for course thumbnails
+- Public avatar upload flow for signup
+- Authenticated upload flow for logged-in users
+- File URLs are stored in MongoDB, not raw files
+
+## Project Documentation
+
+Use these files to understand the current codebase and roadmap:
+
+- [document/2026-07-13/00-main-implementation.txt](./document/2026-07-13/00-main-implementation.txt)
+- [document/2026-07-13/01-current-state.md](./document/2026-07-13/01-current-state.md)
+- [document/2026-07-13/02-completed-today.md](./document/2026-07-13/02-completed-today.md)
+- [document/2026-07-13/03-phases-and-roadmap.md](./document/2026-07-13/03-phases-and-roadmap.md)
+- [document/2026-07-13/04-api-map.md](./document/2026-07-13/04-api-map.md)
+- [document/2026-07-13/05-decisions-and-notes.md](./document/2026-07-13/05-decisions-and-notes.md)
+- [document/2026-07-13/06-open-items.md](./document/2026-07-13/06-open-items.md)
+
+## Main API Areas
+
+- Auth
+- Users
+- Courses
+- Sections
+- Lessons
+- Enrollments
+- Orders
+- Reviews
+- Wishlist
+- Categories
+- Coupons
+- Notifications
+- Uploads
+- Dashboards
+
+## Current Direction
+
+The next product phases are:
+
+1. Finish file uploads for PDFs and videos
+2. Add payment integration with Lemon Squeezy
+3. Connect payment success to auto-enrollment
+4. Add production email support for password reset
+5. Improve media handling and streaming
+
+## Development Notes
+
+- The backend is the source of truth for important business logic.
+- The frontend sends user intent and renders the UI.
+- Uploaded files should be stored as URLs only.
+- The project is being built in phases so each major system stays understandable and maintainable.
+
+## Setup
+
+Backend and frontend are separated into their own folders.
+
+### Backend
+
+```bash
+cd Backend
+npm install
+npm run dev
 ```
-coursify/
-├── Backend/
-│   ├── routers/
-│   │   ├── admin.js
-│   │   ├── course.js
-│   │   └── user.js
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── db.js
-│   ├── config.js
-│   └── index.js
-└── Frontend/
-    ├── index.html
-    ├── admin.html
-    ├── style.css
-    ├── script.js
-    └── admin.js
+
+### Frontend
+
+```bash
+cd Frontend
+npm install
+npm run dev
 ```
-
-## API Endpoints
-
-### Admin Routes
-- `POST /api/v1/admin/signup` - Admin registration
-- `POST /api/v1/admin/signin` - Admin login
-- `POST /api/v1/admin/course` - Create new course
-- `GET /api/v1/admin/courses/all` - Get all courses
-- `GET /api/v1/admin/course/:courseId` - Get specific course
-- `PUT /api/v1/admin/course/:courseId` - Update course
-- `DELETE /api/v1/admin/course/:courseId` - Delete course
-
-### User Routes
-- `POST /api/v1/user/signup` - User registration
-- `POST /api/v1/user/signin` - User login
-- `POST /api/v1/course/purchase` - Purchase a course
-- `POST /api/v1/course/review/:courseId` - Add course review
-- `GET /api/v1/course/reviews/:courseId` - Get course reviews
-
-## Setup Instructions
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   cd Backend
-   npm install
-   ```
-3. Set up environment variables in `config.js`
-4. Start the backend server:
-   ```bash
-   npm start
-   ```
-5. Open the Frontend files in your browser
 
 ## Environment Variables
 
-Create a `config.js` file in the Backend directory with the following variables:
-```javascript
-module.exports = {
-    PORT: 3001,
-    MONGODB_URI: "your_mongodb_uri",
-    JWT_SECRET: "your_jwt_secret"
-};
+Backend environment variables include:
+
+```env
+MONGODB_URL=your_mongodb_url
+PORT=3000
+JWT_ACCESS_SECRET=your_access_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+CORS_ORIGINS=http://localhost:5173
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-## Security Features
-- JWT-based authentication
-- Password hashing
-- Protected routes for admin and user actions
+## Notes
 
-## Current Limitations
-- Basic course structure without modules/lessons
-- Simple review system
-- Basic user progress tracking
-
-## Future Enhancements
-- Course content management (modules, lessons)
-- Advanced user progress tracking
-- Payment gateway integration
-- Course search and filtering
-- User profile management
-
-## Acknowledgments
-
-- Font Awesome for icons
-- MongoDB for database
-- Express.js for backend framework
-- Node.js for runtime environment
-
-## Contact
-
-Your Name - ranajayant527@gmail.com
-Project Link: [https://github.com/Jayant9917/coursify.git](https://github.com/yourusername/coursify)
+- The old MVP documentation has been replaced by the new phase-based docs in `document/`.
+- Password reset works in development without an email provider so testing is easy.
+- The repository is now focused on becoming a larger course platform rather than a small demo.
 
