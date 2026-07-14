@@ -1,22 +1,19 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, GraduationCap, Layers3, Play, Search, Sparkles, Users, Video } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, ChevronDown, Clock3, FileText, Layers3, LayoutGrid, List, Play, Search, Sparkles, Video } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { useCourseDetail, useCourses, useFeaturedCourses, useFreeCourses, useTrendingCourses } from "@/hooks/useCourses";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { Button, Card, Progress } from "@/components/ui";
-import { SearchBar } from "@/components/common/SearchBar";
 import { CourseCard } from "@/components/common/CourseCard";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
+import { Hero1 } from "@/components/common/Hero1";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { findCourseById, normalizeId } from "@/utils/courseUtils";
-
-const reveal = { hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0 } };
-const placeholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%23e5e5e5'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='26' fill='%23737373'%3ECoursify%3C/text%3E%3C/svg%3E";
+import { getCourseArtwork } from "@/utils/courseArtwork";
 
 export function Home() {
   const navigate = useNavigate();
@@ -35,56 +32,7 @@ export function Home() {
 
   return (
     <div className="overflow-hidden bg-[#fbfbfa] dark:bg-[#111111]">
-      <section className="soft-grid relative border-b border-neutral-200/70 dark:border-neutral-800/70">
-        <div className="pointer-events-none absolute left-1/2 top-24 h-72 w-72 -translate-x-1/2 rounded-full bg-lime-300/30 blur-3xl dark:bg-lime-400/10" />
-        <div className="page-shell relative py-20 sm:py-28 lg:py-36">
-          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-            <motion.div initial="hidden" animate="visible" variants={reveal} transition={{ duration: 0.6 }} className="space-y-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-600 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Learn, build, and level up with Coursify
-              </div>
-              <div className="space-y-5">
-                <h1 className="max-w-3xl text-5xl font-bold tracking-tight text-neutral-950 sm:text-6xl lg:text-7xl dark:text-white">
-                  Discover your next <span className="text-lime-500">edge.</span>
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-neutral-600 dark:text-neutral-300">
-                  A focused learning library for people who want to learn useful things, make better work, and teach what they know.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="min-w-0 flex-1">
-                  <SearchBar placeholder="Search any course..." onSubmit={(value) => navigate(value.trim() ? `/courses?search=${encodeURIComponent(value.trim())}` : "/courses")} />
-                </div>
-                <Button size="lg" onClick={() => navigate("/courses")}>Browse courses <ArrowRight className="h-4 w-4" /></Button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Stat label="Courses" value="500+" icon={BookOpen} />
-                <Stat label="Students" value="10K+" icon={Users} />
-                <Stat label="Completion" value="95%" icon={GraduationCap} />
-              </div>
-            </motion.div>
-
-            <motion.div initial="hidden" animate="visible" variants={reveal} transition={{ duration: 0.6, delay: 0.12 }}>
-              <Card className="relative overflow-hidden border-neutral-200 bg-white/90 dark:border-neutral-800 dark:bg-neutral-900/90">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(190,242,100,0.35),_transparent_42%),radial-gradient(circle_at_bottom_right,_rgba(23,23,23,0.08),_transparent_35%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(190,242,100,0.14),_transparent_42%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
-                <div className="relative p-7 sm:p-9">
-                  <p className="eyebrow">Featured learning</p>
-                  <h2 className="mt-3 text-3xl font-bold text-neutral-950 dark:text-white">Built for focus, not clutter.</h2>
-                  <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">Browse categories, save favorites, and jump back into lessons with a clean, role-aware workspace.</p>
-                  <div className="mt-6 grid gap-3">
-                    {["Personalized dashboards", "Progress tracking", "Instructor tools", "Admin controls"].map((item) => (
-                      <div key={item} className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white/80 px-4 py-3 text-sm text-neutral-700 dark:border-neutral-700 dark:bg-neutral-950/40 dark:text-neutral-200">
-                        <span className="h-2 w-2 rounded-full bg-lime-500" />{item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      <Hero1 onBrowse={() => navigate("/courses")} onSearch={(value) => navigate(value.trim() ? `/courses?search=${encodeURIComponent(value.trim())}` : "/courses")} />
 
       <section className="page-shell border-y border-neutral-200/70 py-24 dark:border-neutral-800/70 sm:py-32">
         <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-20">
@@ -125,7 +73,7 @@ export function Home() {
         <ContinueLearning enrollment={activeEnrollment} course={enrolledCourse} detail={continueDetailQuery.data} onContinue={() => navigate(`/student/courses/${normalizeId(activeEnrollment.courseId)}/learn`)} />
       ) : null}
 
-      <TrendingCourses query={trendingQuery} navigate={navigate} />
+      <TrendingCoursesToggle query={trendingQuery} navigate={navigate} />
 
       <section className="page-shell py-20 sm:py-28">
         <div className="mb-6 flex items-end justify-between gap-4"><div><p className="eyebrow">Learning paths</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">Go from curious to capable.</h2></div><Sparkles className="hidden h-6 w-6 text-lime-500 sm:block" /></div>
@@ -178,7 +126,7 @@ function ContinueLearning({ enrollment, course, detail, onContinue }) {
   const lessons = detail?.lessons || [];
   const completed = enrollment.completedLessonIds?.length || Math.round((enrollment.progressPercent || 0) * lessons.length / 100);
   const nextLesson = lessons.find((lesson) => !enrollment.completedLessonIds?.some((id) => normalizeId(id) === normalizeId(lesson._id))) || lessons[completed];
-  return <section className="page-shell py-20 sm:py-28"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="eyebrow">Continue learning</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">Pick up where you left off.</h2></div><Button variant="outline" onClick={onContinue}>My courses</Button></div><Card className="overflow-hidden border-neutral-200 dark:border-neutral-800"><div className="grid gap-0 md:grid-cols-[240px_1fr_auto]"><img src={course.thumbnailUrl || placeholder} alt="" className="h-full min-h-48 w-full object-cover" /><div className="p-6"><p className="text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</p><h3 className="mt-2 text-2xl font-bold text-neutral-950 dark:text-white">{course.title}</h3><div className="mt-5 flex items-center gap-3"><Progress value={enrollment.progressPercent || 0} className="max-w-xs" /><span className="text-sm font-semibold text-neutral-950 dark:text-white">{enrollment.progressPercent || 0}%</span></div><p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">{completed} of {lessons.length || "--"} lessons completed</p><p className="mt-5 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300"><Clock3 className="h-4 w-4" /> Up next: <span className="font-semibold text-neutral-950 dark:text-white">{nextLesson?.title || "Continue your next lesson"}</span></p></div><div className="flex items-end p-6 md:items-center"><Button onClick={onContinue}><Play className="h-4 w-4" /> Continue course</Button></div></div></Card></section>;
+  return <section className="page-shell py-20 sm:py-28"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="eyebrow">Continue learning</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">Pick up where you left off.</h2></div><Button variant="outline" onClick={onContinue}>My courses</Button></div><Card className="overflow-hidden border-neutral-200 dark:border-neutral-800"><div className="grid gap-0 md:grid-cols-[240px_1fr_auto]"><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" className="h-full min-h-48 w-full object-cover" /><div className="p-6"><p className="text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</p><h3 className="mt-2 text-2xl font-bold text-neutral-950 dark:text-white">{course.title}</h3><div className="mt-5 flex items-center gap-3"><Progress value={enrollment.progressPercent || 0} className="max-w-xs" /><span className="text-sm font-semibold text-neutral-950 dark:text-white">{enrollment.progressPercent || 0}%</span></div><p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">{completed} of {lessons.length || "--"} lessons completed</p><p className="mt-5 flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300"><Clock3 className="h-4 w-4" /> Up next: <span className="font-semibold text-neutral-950 dark:text-white">{nextLesson?.title || "Continue your next lesson"}</span></p></div><div className="flex items-end p-6 md:items-center"><Button onClick={onContinue}><Play className="h-4 w-4" /> Continue course</Button></div></div></Card></section>;
 }
 
 function CapabilityBlock({ icon: Icon, tone, eyebrow, title, description }) {
@@ -192,7 +140,29 @@ function CategorySkeletons() {
 
 function TrendingCourses({ query, navigate }) {
   const items = getItems(query.data).slice(0, 6);
-  return <section className="page-shell py-20 sm:py-28"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting now.</h2></div>{items.length > 0 ? <Button variant="outline" onClick={() => navigate("/courses")}>View all</Button> : null}</div>{query.isLoading ? <LoadingSpinner /> : query.isError ? <ErrorState description="We could not load trending courses right now." onRetry={() => query.refetch()} /> : items.length === 0 ? <EmptyState title="No trending courses yet" description="Published courses will appear here as learners discover them." icon={BookOpen} actionLabel="Browse courses" onAction={() => navigate("/courses")} /> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full items-center gap-4 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px]"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || placeholder} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}</section>;
+  return <section className="page-shell py-20 sm:py-28"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting now.</h2></div>{items.length > 0 ? <Button variant="outline" onClick={() => navigate("/courses")}>View all</Button> : null}</div>{query.isLoading ? <LoadingSpinner /> : query.isError ? <ErrorState description="We could not load trending courses right now." onRetry={() => query.refetch()} /> : items.length === 0 ? <EmptyState title="No trending courses yet" description="Published courses will appear here as learners discover them." icon={BookOpen} actionLabel="Browse courses" onAction={() => navigate("/courses")} /> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full items-center gap-4 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px]"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}</section>;
+}
+
+function TrendingCoursesToggle({ query, navigate }) {
+  const items = getItems(query.data).slice(0, 6);
+  const [cardView, setCardView] = useState(false);
+
+  if (query.isLoading) return <section className="page-shell py-20 sm:py-28"><LoadingSpinner /></section>;
+  if (query.isError) return <section className="page-shell py-20 sm:py-28"><ErrorState description="We could not load trending courses right now." onRetry={() => query.refetch()} /></section>;
+  if (items.length === 0) return <section className="page-shell py-20 sm:py-28"><EmptyState title="No trending courses yet" description="Published courses will appear here as learners discover them." icon={BookOpen} actionLabel="Browse courses" onAction={() => navigate("/courses")} /></section>;
+
+  return (
+    <section className="page-shell py-20 sm:py-28">
+      <div className="flex items-end justify-between gap-4">
+        <div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting now.</h2></div>
+        <Button variant="outline" className="shrink-0 gap-2" onClick={() => setCardView((current) => !current)}>
+          {cardView ? <List aria-hidden="true" className="h-4 w-4" /> : <LayoutGrid aria-hidden="true" className="h-4 w-4" />}
+          {cardView ? "Use compact list" : "Explore as cards"}
+        </Button>
+      </div>
+      {cardView ? <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">{items.map((course) => <CourseCard key={course._id} course={course} href={`/courses/${course.slug}`} actionLabel="Explore" />)}</div> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full items-center gap-4 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px]"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}
+    </section>
+  );
 }
 
 function CourseRail({ eyebrow, title, query, navigate, hideWhenEmpty = false, emptyTitle = "No courses found", emptyDescription = "Published courses will appear here soon." }) {
@@ -214,6 +184,3 @@ const faqs = [
   { question: "How do I track my progress?", answer: "The lesson player records completed lessons and shows your percentage on your dashboard and Continue Learning section." },
 ];
 
-function Stat({ label, value, icon: Icon }) {
-  return <Card className="border-neutral-200 dark:border-neutral-800"><div className="flex items-center gap-4 p-4"><div className="grid h-11 w-11 place-items-center rounded-xl bg-[#171717] text-white dark:bg-white dark:text-black"><Icon className="h-5 w-5" /></div><div><p className="text-sm text-neutral-500 dark:text-neutral-400">{label}</p><p className="text-2xl font-bold text-neutral-950 dark:text-white">{value}</p></div></div></Card>;
-}

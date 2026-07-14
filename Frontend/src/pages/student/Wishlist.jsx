@@ -4,6 +4,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { findCourseById, normalizeId } from "@/utils/courseUtils";
+import { getCourseArtwork } from "@/utils/courseArtwork";
 import { getApiErrorMessage } from "@/services/api";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -44,7 +45,7 @@ export function Wishlist() {
             <Card key={item._id} className="p-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-4">
-                  <img src={course.thumbnailUrl || placeholder} alt={course.title} className="h-20 w-32 rounded-xl object-cover" />
+                  <img src={course.thumbnailUrl || getCourseArtwork(course)} alt={course.title} className="h-20 w-32 rounded-xl object-cover" />
                   <div>
                     <h3 className="text-lg font-semibold text-slate-950">{course.title}</h3>
                     <p className="mt-1 text-sm text-slate-500">{course.shortDescription || course.description}</p>
@@ -61,6 +62,3 @@ export function Wishlist() {
     </div>
   );
 }
-
-const placeholder =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='26' fill='%2394a3b8'%3ECoursify%3C/text%3E%3C/svg%3E";

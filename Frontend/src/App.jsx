@@ -1,12 +1,15 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { AppRoutes } from "@/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { authApi, getStoredRefreshToken, setStoredRefreshToken } from "@/services/api";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { recordRoute, getCurrentRoute } from "@/utils/routeHistory";
 
 export default function App() {
   const { hydrated, setAuth, clearAuth, markHydrated } = useAuth();
+  const location = useLocation();
   useEffect(() => {
     let mounted = true;
 
@@ -34,6 +37,10 @@ export default function App() {
       mounted = false;
     };
   }, [setAuth, clearAuth, markHydrated]);
+
+  useEffect(() => {
+    recordRoute(getCurrentRoute());
+  }, [location.pathname, location.search, location.hash]);
 
   if (!hydrated) {
     return <LoadingSpinner label="Loading Coursify..." />;

@@ -5,6 +5,7 @@ import { Badge, Button, Card, Input, Separator } from "@/components/ui";
 import { EmptyState } from "@/components/common/EmptyState";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useCheckout } from "@/hooks/useCheckout";
+import { getPreviousRoute } from "@/utils/routeHistory";
 import { formatPrice } from "@/utils/formatPrice";
 
 function getCoursePrice(course) {
@@ -43,12 +44,8 @@ export function Checkout() {
   const [couponTouched, setCouponTouched] = useState(false);
 
   const goBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate("/courses");
+    const previousRoute = getPreviousRoute();
+    navigate(previousRoute || "/courses");
   };
 
   useEffect(() => {

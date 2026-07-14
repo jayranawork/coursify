@@ -4,9 +4,7 @@ import { StarRating } from "@/components/common/StarRating";
 import { formatPrice } from "@/utils/formatPrice";
 import { truncate } from "@/utils/truncate";
 import { BookOpen, Users } from "lucide-react";
-
-const PLACEHOLDER =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='480' viewBox='0 0 800 480'%3E%3Crect width='800' height='480' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='28' fill='%2394a3b8'%3ECoursify%3C/text%3E%3C/svg%3E";
+import { getCourseArtwork } from "@/utils/courseArtwork";
 
 export function CourseCard({ course, href, actionLabel = "View Course", onAction }) {
   const price = course.discountPrice && course.discountPrice > 0 ? course.discountPrice : course.price;
@@ -14,10 +12,10 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
   const lessonCount = course.lessonCount || course.lessonsCount || course.sections?.reduce((count, section) => count + (section.lessons?.length || 0), 0) || 0;
 
   return (
-    <Card className="group overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-neutral-300 hover:shadow-xl dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700">
+    <Card className="group flex h-[500px] flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-lime-400 hover:shadow-lg focus-within:ring-2 focus-within:ring-lime-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-lime-500 sm:h-[520px]">
       <div className="relative isolate aspect-[4/3] overflow-hidden bg-neutral-900">
         <img
-          src={course.thumbnailUrl || PLACEHOLDER}
+          src={course.thumbnailUrl || getCourseArtwork(course)}
           alt={course.title}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -40,7 +38,7 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
         </div>
       </div>
 
-      <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-5">
         <div className="space-y-2">
           <h3 className="line-clamp-2 text-[1.05rem] font-semibold leading-snug text-neutral-950 dark:text-white">
             {course.title}
@@ -50,7 +48,7 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+        <div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
           <span className="truncate">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span>
           <span className="flex shrink-0 items-center gap-1">
             <StarRating value={course.ratingAvg || course.rating || 0} />
@@ -69,7 +67,7 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
           </span>
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 pt-1">
+        <div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold tracking-tight text-neutral-950 dark:text-white">{formatPrice(price)}</span>

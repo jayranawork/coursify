@@ -9,6 +9,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { findCourseById, getEnrollmentForCourse, groupLessonsBySection, normalizeId } from "@/utils/courseUtils";
+import { getPreviousRoute } from "@/utils/routeHistory";
 import { stripHtml } from "@/utils/sanitizeHtml";
 import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
@@ -35,12 +36,8 @@ export function LessonPlayer() {
   const completedIds = new Set((progressQuery.data || []).filter((record) => record.isCompleted).map((record) => normalizeId(record.lessonId)));
   const completionPercent = enrollment?.progressPercent || 0;
   const goBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate(`/courses/${course?.slug || courseSummary?.slug || id}`);
+    const previousRoute = getPreviousRoute();
+    navigate(previousRoute || `/courses/${course?.slug || courseSummary?.slug || id}`);
   };
 
   useEffect(() => {

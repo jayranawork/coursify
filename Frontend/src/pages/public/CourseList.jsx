@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Filter, RefreshCcw } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Filter, RefreshCcw } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { useCourses } from "@/hooks/useCourses";
+import { getPreviousRoute } from "@/utils/routeHistory";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
 import { CourseCard } from "@/components/common/CourseCard";
 import { Pagination } from "@/components/common/Pagination";
@@ -12,6 +13,7 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 
 export function CourseList() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoriesQuery = useCategories();
 
@@ -47,11 +49,19 @@ export function CourseList() {
   };
 
   const clearFilters = () => setSearchParams({});
+  const goBack = () => {
+    const previousRoute = getPreviousRoute();
+    navigate(previousRoute || "/");
+  };
 
   return (
     <div className="page-shell py-8">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
+          <button type="button" onClick={goBack} className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Courses</p>
           <h1 className="mt-2 text-3xl font-black text-slate-950">Find the right course faster.</h1>
         </div>

@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { StarRating } from "@/components/common/StarRating";
 import { formatPrice } from "@/utils/formatPrice";
 import { groupLessonsBySection, isCourseInWishlist, isEnrollmentForCourse, normalizeId } from "@/utils/courseUtils";
+import { getCourseArtwork } from "@/utils/courseArtwork";
 import { stripHtml } from "@/utils/sanitizeHtml";
 import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
@@ -136,7 +137,7 @@ export function CourseDetail() {
 
         <Card className="overflow-hidden border-slate-200">
           <img
-            src={course.thumbnailUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='540' viewBox='0 0 900 540'%3E%3Crect width='900' height='540' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='32' fill='%2394a3b8'%3ECoursify Course%3C/text%3E%3C/svg%3E"}
+            src={course.thumbnailUrl || getCourseArtwork(course, "hero")}
             alt={course.title}
             className="h-72 w-full object-cover"
           />
