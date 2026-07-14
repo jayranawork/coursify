@@ -34,6 +34,14 @@ export function LessonPlayer() {
   const lessonsBySection = useMemo(() => groupLessonsBySection(lessons), [lessons]);
   const completedIds = new Set((progressQuery.data || []).filter((record) => record.isCompleted).map((record) => normalizeId(record.lessonId)));
   const completionPercent = enrollment?.progressPercent || 0;
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+
+    navigate(`/courses/${course?.slug || courseSummary?.slug || id}`);
+  };
 
   useEffect(() => {
     if (!currentLessonId && lessons.length > 0) {
@@ -120,7 +128,19 @@ export function LessonPlayer() {
             ) : currentLesson.type === "video" ? (
               <video controls className="w-full" src={currentLesson.videoUrl || currentLesson.content} />
             ) : currentLesson.type === "pdf" ? (
-              <iframe title={currentLesson.title} src={currentLesson.content || currentLesson.videoUrl} className="h-[520px] w-full bg-white" />
+              <div className="space-y-3 bg-white p-4">
+                <iframe title={currentLesson.title} src={currentLesson.fileUrl || currentLesson.content || currentLesson.videoUrl} className="h-[520px] w-full bg-white" />
+                {currentLesson.fileUrl ? (
+                  <a
+                    href={currentLesson.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+                  >
+                    Open PDF in new tab
+                  </a>
+                ) : null}
+              </div>
             ) : (
               <div className="prose prose-invert max-w-none p-6 whitespace-pre-line">
                 <div>{stripHtml(currentLesson.content) || "No content available."}</div>
@@ -135,6 +155,9 @@ export function LessonPlayer() {
               </Button>
               <Button variant="outline" onClick={() => navigate(`/courses/${course.slug}`)}>
                 Back to course
+              </Button>
+              <Button variant="ghost" onClick={goBack}>
+                Back
               </Button>
             </div>
           ) : null}

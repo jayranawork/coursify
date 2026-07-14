@@ -1,9 +1,16 @@
 const ApiError = require("../utils/apiError");
 const { uploadImage: cloudinaryUploadImage } = require("../utils/cloudinary");
+const {
+  buildObjectKey,
+  createPresignedPutUrl,
+  validateFileUpload,
+} = require("../utils/s3");
 
 const ALLOWED_FOLDERS = {
   avatars: ["student", "instructor", "admin"],
   courseThumbnails: ["instructor", "admin"],
+  lessonVideos: ["instructor", "admin"],
+  lessonPdfs: ["instructor", "admin"],
 };
 
 const normalizeFolder = (folder) => {
@@ -49,6 +56,24 @@ const uploadService = {
     return {
       folder: "avatars",
       ...result,
+    };
+  },
+
+  async requestLessonFileUpload(actor, payload) {
+    const folder = validateFileUpload({
+      folder: payload.folder,
+      contentType: payload.contentType,
+    });
+    assertFolderPermission(actor, folder);
+
+    const key = buildObjectKey(folder, payload.fileName);
+    const presigned = createPresignedPutUrl({ key });
+
+    return {
+      provider: "s3",
+      folder,
+      fileKey: key,
+      ...presigned,
     };
   },
 };

@@ -35,14 +35,14 @@ Still to improve:
 Completed:
 
 - Cloudinary image uploads
+- Presigned S3 upload flow for lesson PDFs and videos
+- Lesson editor upload UI for videos and PDFs
+- Lesson player support for uploaded PDF links
 
 Still left:
 
-- S3 for PDFs
-- S3 for videos
-- Lesson file upload UI
-- Lesson video upload UI
 - Safer media access and streaming strategy
+- Signed playback or protected file access if needed
 
 ## Phase 4 - Payments
 
@@ -64,4 +64,3 @@ Still left:
 - Caching strategy
 - Performance split for large frontend chunks
 - More audit logging and operational safeguards
-

@@ -26,6 +26,7 @@ import { Dashboard as InstructorDashboard } from "@/pages/instructor/Dashboard";
 import { MyCourses as InstructorCourses } from "@/pages/instructor/MyCourses";
 import { CourseEditor } from "@/pages/instructor/CourseEditor";
 import { Stats as InstructorStats } from "@/pages/instructor/Stats";
+import { Profile as InstructorProfile } from "@/pages/instructor/Profile";
 
 import { Dashboard as AdminDashboard } from "@/pages/admin/Dashboard";
 import { UserManagement } from "@/pages/admin/UserManagement";
@@ -81,6 +82,7 @@ export function AppRoutes() {
         <Route path="courses/new" element={<CourseEditor />} />
         <Route path="courses/:id/edit" element={<CourseEditor />} />
         <Route path="stats" element={<InstructorStats />} />
+        <Route path="profile" element={<InstructorProfile />} />
       </Route>
 
       <Route

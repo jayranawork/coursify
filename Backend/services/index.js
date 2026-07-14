@@ -19,6 +19,12 @@ const {
   markResetTokenUsed,
   deleteResetTokensByUserId,
 } = require("../utils/passwordResetStore");
+const { createPresignedGetUrl } = require("../utils/s3");
+const {
+  createCheckout: createLemonSqueezyCheckout,
+  parseWebhookBody: parseLemonSqueezyWebhookBody,
+  verifyWebhookSignature: verifyLemonSqueezyWebhookSignature,
+} = require("../utils/lemonSqueezy");
 const {
   User,
   Category,
@@ -176,7 +182,7 @@ const pickSectionUpdates = (payload) => {
 
 const pickLessonUpdates = (payload) => {
   const updates = {};
-  const fields = ["title", "type", "content", "videoUrl", "duration", "isPreview", "order"];
+  const fields = ["title", "type", "content", "videoUrl", "fileKey", "fileUrl", "duration", "isPreview", "order"];
 
   fields.forEach((field) => {
     if (payload[field] !== undefined) {
@@ -663,6 +669,7 @@ const lessonService = {
       type: payload.type,
       content: payload.content || "",
       videoUrl: payload.videoUrl || "",
+      fileKey: payload.fileKey || payload.fileUrl || "",
       duration: payload.duration || 0,
       isPreview: Boolean(payload.isPreview),
       order: payload.order || lessonCount + 1,
@@ -764,6 +771,38 @@ const enrollmentService = {
     const records = await CourseProgress.find({ userId: actor.id, courseId }).sort({ createdAt: -1 });
     return records;
   },
+
+  async getLessonAccessUrl(actor, courseId, lessonId) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+
+    const lesson = await Lesson.findOne({ _id: lessonId, courseId });
+    if (!lesson) throw new ApiError(404, "Lesson not found");
+
+    const isOwner = isOwnerOrAdmin(actor, course.instructorId);
+    const isEnrolled = Boolean(await Enrollment.findOne({ userId: actor.id, courseId }));
+    const canPreview = Boolean(lesson.isPreview);
+
+    if (!isOwner && actor.role !== "admin" && !isEnrolled && !canPreview) {
+      throw new ApiError(403, "You do not have access to this lesson");
+    }
+
+    const storageKey = lesson.fileKey || lesson.fileUrl || lesson.videoUrl;
+    if (!storageKey) {
+      throw new ApiError(404, "Lesson media not found");
+    }
+
+    if (/^https?:\/\//i.test(storageKey)) {
+      return { url: storageKey, fileKey: lesson.fileKey || storageKey };
+    }
+
+    const signed = createPresignedGetUrl({ key: storageKey });
+    return {
+      url: signed.signedUrl,
+      fileKey: storageKey,
+      expiresInSeconds: signed.expiresInSeconds,
+    };
+  },
 };
 
 const orderService = {
@@ -807,8 +846,8 @@ const orderService = {
       amount,
       currency: payload.currency || "INR",
       status: "pending",
-      paymentProvider: payload.paymentProvider || "manual",
-      paymentIntentId: payload.paymentIntentId || "",
+      paymentProvider: "lemon_squeezy",
+      paymentIntentId: "",
       couponCode,
     });
 
@@ -820,7 +859,38 @@ const orderService = {
       }))
     );
 
-    return order;
+    let checkout;
+    try {
+      checkout = await createLemonSqueezyCheckout({
+        amount: amount * 100,
+        currency: payload.currency || "INR",
+        orderId: order._id,
+        userId: actor.id,
+        userEmail: actor.email,
+        courseIds,
+        couponCode,
+      });
+    } catch (error) {
+      await Order.updateOne({ _id: order._id }, { $set: { status: "failed" } });
+      throw error;
+    }
+
+    await Order.updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          paymentIntentId: checkout.checkoutId || "",
+          paymentProvider: "lemon_squeezy",
+        },
+      }
+    );
+
+    return {
+      ...order.toObject(),
+      paymentProvider: "lemon_squeezy",
+      paymentIntentId: checkout.checkoutId || "",
+      checkoutUrl: checkout.checkoutUrl,
+    };
   },
 
   async myOrders(userId) {
@@ -829,6 +899,76 @@ const orderService = {
 
   async listOrders(query) {
     return paginate(Order, {}, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
+  },
+
+  async handleLemonSqueezyWebhook({ rawBody, signature, body }) {
+    verifyLemonSqueezyWebhookSignature({ rawBody, signature });
+
+    const { eventName, customData, payload } = parseLemonSqueezyWebhookBody(body);
+    const orderId =
+      customData?.order_id ||
+      customData?.orderId ||
+      payload?.data?.attributes?.custom_data?.order_id ||
+      payload?.data?.attributes?.custom_data?.orderId;
+
+    if (!orderId) {
+      throw new ApiError(400, "Webhook payload is missing order metadata");
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    if (eventName === "order_refunded") {
+      order.status = "refunded";
+      await order.save();
+      return { ok: true, eventName, orderId: String(order._id), status: order.status };
+    }
+
+    if (!["order_created", "order_paid", "order_updated"].includes(eventName)) {
+      return { ok: true, skipped: true, eventName, orderId: String(order._id) };
+    }
+
+    if (order.status === "paid") {
+      return { ok: true, alreadyProcessed: true, orderId: String(order._id), status: order.status };
+    }
+
+    order.status = "paid";
+    order.paymentProvider = "lemon_squeezy";
+    order.paymentIntentId = String(payload?.data?.id || order.paymentIntentId || "");
+    await order.save();
+
+    const orderItems = await OrderItem.find({ orderId: order._id });
+    for (const item of orderItems) {
+      const existingEnrollment = await Enrollment.findOne({ userId: order.userId, courseId: item.courseId });
+      if (existingEnrollment) {
+        continue;
+      }
+
+      await Enrollment.findOneAndUpdate(
+        { userId: order.userId, courseId: item.courseId },
+        {
+          $setOnInsert: {
+            userId: order.userId,
+            courseId: item.courseId,
+            status: "active",
+            progressPercent: 0,
+            completedLessonIds: [],
+          },
+        },
+        { new: true, upsert: true }
+      );
+
+      await Course.updateOne({ _id: item.courseId }, { $inc: { enrollmentCount: 1 } });
+    }
+
+    return {
+      ok: true,
+      eventName,
+      orderId: String(order._id),
+      status: order.status,
+    };
   },
 };
 

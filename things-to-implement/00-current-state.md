@@ -21,7 +21,7 @@ This file records what the project already does today and what is still incomple
 
 ## Missing or weak areas
 
-- File upload flow for videos and PDFs.
+- Finalized media access strategy for videos and PDFs.
 - Chunked upload for large files.
 - HLS video processing and signed playback URLs.
 - Better caching and scale strategy for larger traffic.
@@ -31,6 +31,8 @@ This file records what the project already does today and what is still incomple
 - Cloudinary image uploads for avatars and course thumbnails.
 - Backend upload endpoint that stores only file URLs in MongoDB.
 - Frontend upload controls for profile avatars and course thumbnails.
+- Presigned S3 uploads for lesson PDFs and videos.
+- Frontend lesson upload controls for videos and PDFs.
 
 ## Important risk notes
 

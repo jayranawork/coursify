@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Bell, Menu, LogOut, UserCircle2, LayoutDashboard, Heart, BookOpen, BadgeHelp } from "lucide-react";
+import { Bell, Menu, LogOut, UserCircle2, LayoutDashboard, Heart, BookOpen, Moon, Sun } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card } from "@/components/ui";
 import { SearchBar } from "@/components/common/SearchBar";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,9 +14,23 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("coursify_theme") === "dark");
   const notificationsQuery = useNotifications(Boolean(accessToken));
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const dashboardPath = getDashboardPath(user?.role);
+  const profilePath = getProfilePath(user?.role);
+  const wishlistPath = user?.role === "student" ? "/student/wishlist" : "/instructor/courses";
+  const coursesPath = user?.role === "student" ? "/student/courses" : "/instructor/courses";
+
+  const toggleTheme = () => {
+    setDarkMode((current) => {
+      const next = !current;
+      document.documentElement.classList.toggle("dark", next);
+      localStorage.setItem("coursify_theme", next ? "dark" : "light");
+      return next;
+    });
+  };
 
   const unreadCount = useMemo(
     () => (notificationsQuery.data || []).filter((item) => !item.read).length,
@@ -36,10 +50,10 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-      <div className="page-shell flex h-16 items-center gap-3">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-slate-900">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 text-white">C</span>
+    <header className="sticky top-0 z-40 border-b border-neutral-200/80 bg-[#fbfbfa]/90 backdrop-blur dark:border-neutral-800/80 dark:bg-[#111111]/90">
+      <div className="page-shell flex h-[72px] items-center gap-3">
+        <Link to="/" className="flex items-center gap-2 font-semibold text-neutral-950 dark:text-white">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#171717] text-sm text-white dark:bg-white dark:text-black">C</span>
           <span>Coursify</span>
         </Link>
 
@@ -54,10 +68,10 @@ export function Navbar() {
         </div>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
-          <NavLink to="/courses" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <NavLink to="/courses" className="text-sm font-medium text-neutral-600 hover:text-neutral-950 dark:text-neutral-300 dark:hover:text-white">
             Courses
           </NavLink>
-          <NavLink to="/register" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+          <NavLink to="/register" className="text-sm font-medium text-neutral-600 hover:text-neutral-950 dark:text-neutral-300 dark:hover:text-white">
             Become an Instructor
           </NavLink>
           {accessToken ? (
@@ -124,11 +138,10 @@ export function Navbar() {
                 {profileOpen ? (
                   <Card className="absolute right-0 mt-2 w-56 overflow-hidden">
                     <div className="p-2">
-                      <MenuLink to={`/${user?.role || "student"}/dashboard`} icon={LayoutDashboard} label="Dashboard" />
-                      <MenuLink to="/student/profile" icon={UserCircle2} label="Profile" />
-                      <MenuLink to="/student/wishlist" icon={Heart} label="Wishlist" />
-                      <MenuLink to="/student/courses" icon={BookOpen} label="Courses" />
-                      <MenuLink to="/student/profile" icon={BadgeHelp} label="Profile settings" />
+                      <MenuLink to={dashboardPath} icon={LayoutDashboard} label="Dashboard" />
+                      <MenuLink to={profilePath} icon={UserCircle2} label="Profile settings" />
+                      <MenuLink to={wishlistPath} icon={Heart} label={user?.role === "student" ? "Wishlist" : "Courses"} />
+                      <MenuLink to={coursesPath} icon={BookOpen} label="Courses" />
                       <button
                         className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                         onClick={logout}
@@ -149,6 +162,9 @@ export function Navbar() {
               <Button onClick={() => navigate("/register")}>Register</Button>
             </>
           )}
+          <Button variant="outline" size="icon" aria-label="Toggle dark mode" onClick={toggleTheme}>
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
         </div>
 
         <Button variant="outline" size="icon" className="md:hidden" onClick={() => setMobileOpen((open) => !open)}>
@@ -178,9 +194,17 @@ export function Navbar() {
                 Courses
               </NavLink>
               {accessToken ? (
-                <button className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100" onClick={logout}>
-                  Logout
-                </button>
+                <>
+                  <NavLink
+                    to={getProfilePath(user?.role)}
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    Profile settings
+                  </NavLink>
+                  <button className="rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-100" onClick={logout}>
+                    Logout
+                  </button>
+                </>
               ) : (
                 <>
                   <NavLink to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
@@ -206,4 +230,15 @@ function MenuLink({ to, icon: Icon, label }) {
       <span>{label}</span>
     </Link>
   );
+}
+
+function getDashboardPath(role) {
+  if (role === "instructor") return "/instructor/dashboard";
+  if (role === "admin") return "/admin/dashboard";
+  return "/student/dashboard";
+}
+
+function getProfilePath(role) {
+  if (role === "instructor") return "/instructor/profile";
+  return "/student/profile";
 }

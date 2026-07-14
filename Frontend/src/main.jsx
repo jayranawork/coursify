@@ -6,6 +6,10 @@ import App from "./App";
 import "./index.css";
 import { Toaster } from "sonner";
 
+if (localStorage.getItem("coursify_theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

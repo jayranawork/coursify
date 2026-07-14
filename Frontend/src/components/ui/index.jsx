@@ -5,10 +5,10 @@ export function Button({ className, variant = "default", size = "default", asChi
   const base =
     "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:pointer-events-none disabled:opacity-50";
   const variants = {
-    default: "bg-slate-900 text-white hover:bg-slate-700",
-    secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-    ghost: "bg-transparent text-slate-900 hover:bg-slate-100",
-    outline: "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+    default: "bg-[#171717] text-white hover:bg-lime-400 hover:text-black dark:bg-white dark:text-black dark:hover:bg-lime-300",
+    secondary: "bg-neutral-100 text-neutral-900 hover:bg-lime-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700",
+    ghost: "bg-transparent text-neutral-900 hover:bg-neutral-100 dark:text-white dark:hover:bg-neutral-800",
+    outline: "border border-neutral-200 bg-white text-neutral-900 hover:border-neutral-400 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800",
     destructive: "bg-red-600 text-white hover:bg-red-700",
   };
   const sizes = {
@@ -37,7 +37,7 @@ export const Input = React.forwardRef(function Input({ className, ...props }, re
     <input
       ref={ref}
       className={cn(
-        "flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:ring-offset-neutral-900",
         className
       )}
       {...props}
@@ -51,7 +51,7 @@ export const Textarea = React.forwardRef(function Textarea({ className, ...props
     <textarea
       ref={ref}
       className={cn(
-        "flex min-h-[96px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-[96px] w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:ring-offset-neutral-900",
         className
       )}
       {...props}
@@ -61,7 +61,7 @@ export const Textarea = React.forwardRef(function Textarea({ className, ...props
 Textarea.displayName = "Textarea";
 
 export function Label({ className, ...props }) {
-  return <label className={cn("text-sm font-medium text-slate-700", className)} {...props} />;
+  return <label className={cn("text-sm font-medium text-neutral-700 dark:text-neutral-300", className)} {...props} />;
 }
 
 export function Badge({ className, variant = "default", ...props }) {
@@ -78,7 +78,7 @@ export function Badge({ className, variant = "default", ...props }) {
 }
 
 export function Card({ className, ...props }) {
-  return <div className={cn("rounded-2xl border border-slate-200 bg-white shadow-sm", className)} {...props} />;
+  return <div className={cn("rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900", className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }) {
@@ -90,7 +90,7 @@ export function CardTitle({ className, ...props }) {
 }
 
 export function CardDescription({ className, ...props }) {
-  return <p className={cn("text-sm text-slate-500", className)} {...props} />;
+  return <p className={cn("text-sm text-neutral-500 dark:text-neutral-400", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }) {

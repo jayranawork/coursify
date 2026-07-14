@@ -1,13 +1,14 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar";
 import { Sidebar } from "@/components/common/Sidebar";
-import { BookOpen, LayoutDashboard, SlidersHorizontal, Sparkles } from "lucide-react";
+import { BookOpen, LayoutDashboard, SlidersHorizontal, Sparkles, UserCircle2 } from "lucide-react";
 
 const items = [
   { to: "/instructor/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/instructor/courses", label: "Courses", icon: BookOpen },
   { to: "/instructor/courses/new", label: "New Course", icon: Sparkles },
   { to: "/instructor/stats", label: "Stats", icon: SlidersHorizontal },
+  { to: "/instructor/profile", label: "Profile", icon: UserCircle2 },
 ];
 
 export function InstructorLayout() {

@@ -24,7 +24,14 @@ app.use(
   })
 );
 app.use(securityHeaders);
-app.use(express.json({ limit: "10mb" }));
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, res, buf) => {
+      req.rawBody = Buffer.from(buf);
+    },
+  })
+);
 
 app.get("/", (req, res) => {
   res.json({

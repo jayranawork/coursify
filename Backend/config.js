@@ -21,6 +21,11 @@ const config = {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
+  frontendUrl: process.env.FRONTEND_URL || "",
+  lemonSqueezyApiKey: process.env.LEMONSQUEEZY_API_KEY || "",
+  lemonSqueezyStoreId: process.env.LEMONSQUEEZY_STORE_ID || "",
+  lemonSqueezyVariantId: process.env.LEMONSQUEEZY_VARIANT_ID || "",
+  lemonSqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
 };
 
 module.exports = config;

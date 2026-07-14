@@ -81,6 +81,8 @@ const lessonSchema = z.object({
   type: z.enum(["video", "text", "pdf", "quiz"]),
   content: z.string().optional(),
   videoUrl: z.string().url().optional().or(z.literal("")),
+  fileKey: z.string().min(1).optional().or(z.literal("")),
+  fileUrl: z.string().url().optional().or(z.literal("")),
   duration: z.coerce.number().min(0).optional(),
   isPreview: z.boolean().optional(),
   order: z.coerce.number().int().min(1).optional(),
@@ -145,6 +147,17 @@ const uploadPublicImageSchema = z.object({
   publicId: z.string().min(1).max(120).optional(),
 });
 
+const uploadLessonFileSchema = z.object({
+  fileName: z.string().min(1).max(200),
+  contentType: z.enum(["application/pdf", "video/mp4", "video/webm", "video/quicktime", "video/mpeg"]),
+  folder: z.enum(["lessonVideos", "lessonPdfs"]).optional(),
+});
+
+const lessonAccessSchema = z.object({
+  id: objectId,
+  lessonId: objectId,
+});
+
 module.exports = {
   objectId,
   pagination,
@@ -169,4 +182,6 @@ module.exports = {
   couponValidateSchema,
   uploadImageSchema,
   uploadPublicImageSchema,
+  uploadLessonFileSchema,
+  lessonAccessSchema,
 };

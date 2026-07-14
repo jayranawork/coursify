@@ -101,6 +101,10 @@ const courseController = {
     const data = await courseService.instructorCourses(req.user.id, req.query);
     send(res, data);
   }),
+  lessonAccess: asyncHandler(async (req, res) => {
+    const data = await courseService.getLessonAccessUrl(req.user, req.params.id, req.params.lessonId);
+    send(res, data);
+  }),
 };
 
 const sectionController = {
@@ -156,6 +160,14 @@ const orderController = {
   create: asyncHandler(async (req, res) => {
     const data = await orderService.create(req.user, req.body);
     send(res, data, 201);
+  }),
+  lemonSqueezyWebhook: asyncHandler(async (req, res) => {
+    const data = await orderService.handleLemonSqueezyWebhook({
+      rawBody: req.rawBody || "",
+      signature: req.get("X-Signature") || req.get("x-signature") || "",
+      body: req.body,
+    });
+    send(res, data);
   }),
   me: asyncHandler(async (req, res) => {
     const data = await orderService.myOrders(req.user.id);
@@ -249,6 +261,10 @@ const uploadController = {
   }),
   publicImage: asyncHandler(async (req, res) => {
     const data = await uploadService.uploadPublicAvatar(req.body);
+    send(res, data, 201);
+  }),
+  lessonFile: asyncHandler(async (req, res) => {
+    const data = await uploadService.requestLessonFileUpload(req.user, req.body);
     send(res, data, 201);
   }),
 };

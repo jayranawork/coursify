@@ -21,6 +21,7 @@ const lessonSchema = z.object({
   type: z.enum(["video", "text", "pdf", "quiz"]),
   content: z.string().optional(),
   videoUrl: z.string().optional(),
+  fileUrl: z.string().optional(),
   duration: z.coerce.number().optional(),
   isPreview: z.boolean().optional(),
   order: z.coerce.number().optional(),
@@ -185,6 +186,7 @@ export function CourseEditor() {
             type: lesson.type,
             content: lesson.content || "",
             videoUrl: lesson.videoUrl || "",
+            fileUrl: lesson.fileUrl || "",
             duration: Number(lesson.duration || 0),
             isPreview: Boolean(lesson.isPreview),
             order: lesson.order || lessonIndex + 1,
@@ -295,10 +297,11 @@ export function CourseEditor() {
               <EmptyState title="No sections yet" description="Add a section to begin building the curriculum." />
             ) : (
               sectionsArray.fields.map((sectionField, sectionIndex) => (
-                <SectionEditor
+              <SectionEditor
                   key={sectionField.id}
                   sectionIndex={sectionIndex}
                   register={editorForm.register}
+                  setValue={editorForm.setValue}
                   control={editorForm.control}
                   removeSection={() => sectionsArray.remove(sectionIndex)}
                 />
@@ -328,7 +331,7 @@ export function CourseEditor() {
   );
 }
 
-function SectionEditor({ sectionIndex, control, register, removeSection }) {
+function SectionEditor({ sectionIndex, control, register, setValue, removeSection }) {
   const name = `sections.${sectionIndex}`;
   const lessonsArray = useFieldArray({ control, name: `${name}.lessons` });
 
@@ -352,7 +355,22 @@ function SectionEditor({ sectionIndex, control, register, removeSection }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="font-semibold">Lessons</h4>
-          <Button type="button" variant="outline" onClick={() => lessonsArray.append({ title: "", type: "video", content: "", videoUrl: "", duration: 0, isPreview: false, order: lessonsArray.fields.length + 1 })}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              lessonsArray.append({
+                title: "",
+                type: "video",
+                content: "",
+                videoUrl: "",
+                fileUrl: "",
+                duration: 0,
+                isPreview: false,
+                order: lessonsArray.fields.length + 1,
+              })
+            }
+          >
             <Plus className="h-4 w-4" />
             Add lesson
           </Button>
@@ -367,6 +385,7 @@ function SectionEditor({ sectionIndex, control, register, removeSection }) {
               lessonIndex={lessonIndex}
               control={control}
               register={register}
+              setValue={setValue}
               removeLesson={() => lessonsArray.remove(lessonIndex)}
             />
           ))
@@ -376,8 +395,68 @@ function SectionEditor({ sectionIndex, control, register, removeSection }) {
   );
 }
 
-function LessonEditor({ sectionName, lessonIndex, control, register, removeLesson }) {
+function LessonEditor({ sectionName, lessonIndex, control, register, setValue, removeLesson }) {
   const name = `${sectionName}.lessons.${lessonIndex}`;
+  const lessonType = useWatch({ control, name: `${name}.type` });
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  const uploadLessonFile = async (file, folder) => {
+    const request = await uploadApi.requestLessonFileUpload({
+      fileName: file.name,
+      contentType: file.type,
+      folder,
+    });
+    await uploadApi.uploadToPresignedUrl(request.uploadUrl, file, file.type);
+    return request.fileUrl;
+  };
+
+  const handleVideoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please choose a video file.");
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingVideo(true);
+    try {
+      const fileUrl = await uploadLessonFile(file, "lessonVideos");
+      setValue(`${name}.videoUrl`, fileUrl, { shouldDirty: true, shouldValidate: true });
+      toast.success("Video uploaded");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    } finally {
+      setIsUploadingVideo(false);
+      event.target.value = "";
+    }
+  };
+
+  const handlePdfUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please choose a PDF file.");
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingFile(true);
+    try {
+      const fileUrl = await uploadLessonFile(file, "lessonPdfs");
+      setValue(`${name}.fileUrl`, fileUrl, { shouldDirty: true, shouldValidate: true });
+      toast.success("PDF uploaded");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    } finally {
+      setIsUploadingFile(false);
+      event.target.value = "";
+    }
+  };
+
   return (
     <Card className="space-y-4 border-slate-200 p-4">
       <div className="flex items-center justify-between">
@@ -401,9 +480,26 @@ function LessonEditor({ sectionName, lessonIndex, control, register, removeLesso
             </Select>
           )}
         </Field>
-        <Field label="Video URL" name={`${name}.videoUrl`} register={register}>
-          {(field) => <Input {...field} />}
-        </Field>
+        {lessonType === "video" ? (
+          <Field label="Video URL" name={`${name}.videoUrl`} register={register}>
+            {(field) => <Input {...field} />}
+          </Field>
+        ) : null}
+        {lessonType === "video" ? (
+          <Field label="Upload video">
+            <Input type="file" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+          </Field>
+        ) : null}
+        {lessonType === "pdf" ? (
+          <Field label="PDF URL" name={`${name}.fileUrl`} register={register}>
+            {(field) => <Input {...field} />}
+          </Field>
+        ) : null}
+        {lessonType === "pdf" ? (
+          <Field label="Upload PDF">
+            <Input type="file" accept="application/pdf" onChange={handlePdfUpload} disabled={isUploadingFile} />
+          </Field>
+        ) : null}
         <Field label="Duration" name={`${name}.duration`} register={register}>
           {(field) => <Input type="number" {...field} />}
         </Field>
@@ -411,9 +507,11 @@ function LessonEditor({ sectionName, lessonIndex, control, register, removeLesso
           {(field) => <Input type="number" {...field} />}
         </Field>
       </div>
-      <Field label="Content" name={`${name}.content`} register={register}>
-        {(field) => <Textarea rows={4} {...field} />}
-      </Field>
+      {lessonType !== "pdf" ? (
+        <Field label="Content" name={`${name}.content`} register={register}>
+          {(field) => <Textarea rows={4} {...field} />}
+        </Field>
+      ) : null}
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" {...register(`${name}.isPreview`)} />
         Preview lesson
@@ -446,7 +544,7 @@ async function loadCourse(slug, form) {
     _id: section._id,
     title: section.title,
     order: section.order || index + 1,
-    lessons: (course.lessons || [])
+      lessons: (course.lessons || [])
       .filter((lesson) => lesson.sectionId === section._id)
       .map((lesson, lessonIndex) => ({
         _id: lesson._id,
@@ -454,6 +552,7 @@ async function loadCourse(slug, form) {
         type: lesson.type,
         content: lesson.content || "",
         videoUrl: lesson.videoUrl || "",
+        fileUrl: lesson.fileUrl || "",
         duration: lesson.duration || 0,
         isPreview: Boolean(lesson.isPreview),
         order: lesson.order || lessonIndex + 1,

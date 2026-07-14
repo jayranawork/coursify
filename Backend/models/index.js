@@ -88,6 +88,8 @@ const lessonSchema = new Schema(
     },
     content: { type: String, default: "" },
     videoUrl: { type: String, default: "" },
+    fileUrl: { type: String, default: "" },
+    fileKey: { type: String, default: "" },
     duration: { type: Number, default: 0 },
     isPreview: { type: Boolean, default: false },
     order: { type: Number, required: true },

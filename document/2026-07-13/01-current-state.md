@@ -12,6 +12,7 @@ This is the current product state as of 2026-07-13.
 - JWT access and refresh token auth
 - Persistent refresh tokens stored in MongoDB
 - Cloudinary image uploads for avatars and course thumbnails
+- Presigned S3 upload flow for lesson PDFs and videos
 - Forgot password and reset password flow
 - Rate limiting and security headers
 - Coupon validation and redemption tracking
@@ -25,7 +26,7 @@ This is the current product state as of 2026-07-13.
 
 ## What is not complete yet
 
-- Video and PDF upload pipeline
+- Final lesson media UX and access strategy
 - Proper email provider for password reset emails
 - Payment integration for Lemon Squeezy
 - Auto-enrollment flow after payment
@@ -41,6 +42,5 @@ The future direction is:
 - MongoDB as the main data store
 - React + Vite frontend
 - Cloudinary for images
-- S3 for heavier lesson files later
+- S3 for lesson PDFs and videos
 - Lemon Squeezy for payments later
-

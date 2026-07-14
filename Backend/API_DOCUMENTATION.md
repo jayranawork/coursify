@@ -294,6 +294,37 @@ Allowed folders:
 - `avatars`
 - `courseThumbnails`
 
+### POST `/api/uploads/lesson-file`
+
+Creates a presigned S3 upload URL for a PDF or video file.
+
+Role:
+
+- `instructor`
+- `admin`
+
+Business logic:
+
+- validates that the file type matches the target folder
+- creates a presigned PUT URL for S3
+- returns the final file URL that should be stored in MongoDB after upload
+- does not store the file binary in MongoDB
+
+Request body:
+
+```json
+{
+  "fileName": "lesson-1.mp4",
+  "contentType": "video/mp4",
+  "folder": "lessonVideos"
+}
+```
+
+Allowed folders:
+
+- `lessonVideos`
+- `lessonPdfs`
+
 ## Courses API
 
 ### GET `/api/courses`
@@ -486,6 +517,7 @@ Request body:
   "type": "video",
   "content": "",
   "videoUrl": "",
+  "fileUrl": "",
   "duration": 120,
   "isPreview": true,
   "order": 1
@@ -583,7 +615,7 @@ Role:
 
 ### POST `/api/orders`
 
-Creates a new order in pending state.
+Creates a new order in pending state and returns a Lemon Squeezy checkout URL.
 
 Role:
 
@@ -597,19 +629,42 @@ Business logic:
 - applies the computed coupon discount if valid
 - increments coupon redemption count when a coupon is used
 - creates order and order items
-- leaves order in `pending` status
+- creates a Lemon Squeezy checkout session
+- stores the checkout reference on the order
+- leaves order in `pending` status until the Lemon Squeezy webhook confirms payment
 
 Request body:
 
 ```json
 {
   "courseIds": ["665f...", "665f..."],
-  "currency": "INR",
-  "paymentProvider": "manual",
-  "paymentIntentId": "",
   "couponCode": "WELCOME10"
 }
 ```
+
+Response:
+
+```json
+{
+  "_id": "66ab...",
+  "status": "pending",
+  "paymentProvider": "lemon_squeezy",
+  "paymentIntentId": "checkout_123",
+  "checkoutUrl": "https://checkout.lemonsqueezy.com/..."
+}
+```
+
+### POST `/api/orders/webhook/lemon-squeezy`
+
+Public webhook endpoint used by Lemon Squeezy to confirm payment.
+
+Business logic:
+
+- verifies the `X-Signature` header against the raw request body
+- finds the matching order from webhook custom data
+- marks the order as `paid`
+- enrolls the student into all purchased courses
+- is idempotent on repeated webhook deliveries
 
 ### GET `/api/orders/me`
 
@@ -875,6 +930,7 @@ The backend currently uses these collections:
 - `coupons`
 - `notifications`
 - `refreshtokens`
+- `passwordresettokens`
 
 ## Environment Variables
 
@@ -889,11 +945,21 @@ CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET=your-coursify-bucket
+FRONTEND_URL=http://localhost:5173
+LEMONSQUEEZY_API_KEY=your_lemonsqueezy_api_key
+LEMONSQUEEZY_STORE_ID=your_store_id
+LEMONSQUEEZY_VARIANT_ID=your_variant_id
+LEMONSQUEEZY_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 ## Notes
 
 - Refresh tokens are stored in MongoDB and rotated on refresh.
 - Image uploads now go through Cloudinary.
+- Lesson PDFs and videos use presigned S3 uploads.
 - The backend is designed to be extended into a more complete LMS with payments, media upload, and analytics later.
 - Legacy MVP route files exist in `Backend/routers`, but they are not used by the current app bootstrap.

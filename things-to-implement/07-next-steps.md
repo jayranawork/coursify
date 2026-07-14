@@ -16,7 +16,7 @@ If you want the cleanest path forward, do these in order.
 
 ## Step 4
 
-- Add the upload pipeline for images, PDFs, and videos.
+- Finish the upload pipeline for lesson PDFs and videos with S3 access rules.
 
 ## Step 5
 

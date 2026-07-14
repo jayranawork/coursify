@@ -250,6 +250,10 @@ export const courseApi = {
     const response = await api.get(`/courses/${id}/progress`);
     return unwrap(response);
   },
+  async getLessonAccessUrl(courseId, lessonId) {
+    const response = await api.get(`/courses/${courseId}/lessons/${lessonId}/access`);
+    return unwrap(response);
+  },
 };
 
 export const categoryApi = {
@@ -387,5 +391,24 @@ export const uploadApi = {
   async uploadPublicImage({ dataUrl, publicId }) {
     const response = await api.post("/uploads/public-image", { dataUrl, publicId }, { skipAuthRefresh: true });
     return unwrap(response);
+  },
+  async requestLessonFileUpload({ fileName, contentType, folder }) {
+    const response = await api.post("/uploads/lesson-file", { fileName, contentType, folder });
+    return unwrap(response);
+  },
+  async uploadToPresignedUrl(uploadUrl, file, contentType) {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType || file.type || "application/octet-stream",
+      },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error("S3 upload failed");
+    }
+
+    return true;
   },
 };
