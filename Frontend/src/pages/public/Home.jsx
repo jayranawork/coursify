@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { findCourseById, normalizeId } from "@/utils/courseUtils";
 import { getCourseArtwork } from "@/utils/courseArtwork";
+import { brand } from "@/utils/brand";
 
 export function Home() {
   const navigate = useNavigate();
@@ -36,16 +37,28 @@ export function Home() {
 
       <section className="page-shell border-y border-neutral-200/70 py-24 dark:border-neutral-800/70 sm:py-32">
         <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-20">
-          <div><p className="eyebrow">About Coursify</p><p className="mt-6 max-w-sm text-base leading-7 text-neutral-600 dark:text-neutral-300">Structured courses, focused lessons, progress tracking, and instructor guidance in one calm learning workspace.</p></div>
+          <div><p className="eyebrow">About {brand.name}</p><p className="mt-6 max-w-sm text-base leading-7 text-neutral-600 dark:text-neutral-300">{brand.description} Instructor guidance included.</p></div>
           <div><h2 className="max-w-4xl text-4xl font-bold leading-tight text-neutral-950 sm:text-5xl dark:text-white">Learning that turns curiosity into <span className="text-lime-500">practical capability.</span></h2><p className="mt-7 max-w-2xl text-lg leading-8 text-neutral-500 dark:text-neutral-400">Learn through video and PDF lessons, continue from where you stopped, and follow clear paths from beginner skills to real-world application.</p></div>
         </div>
       </section>
 
       <section className="page-shell py-20 sm:py-28">
         <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-          <div className="relative min-h-[420px] overflow-hidden rounded-3xl bg-neutral-900 p-8 text-white dark:bg-neutral-950 sm:p-10">
-            <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full border-[36px] border-lime-300/80" /><div className="absolute bottom-8 right-8 h-32 w-32 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm" />
-            <div className="relative flex h-full flex-col justify-between"><div><p className="eyebrow text-neutral-400">Learning capabilities</p><h2 className="mt-5 max-w-md text-4xl font-bold">A workspace built around how learning actually happens.</h2></div><div className="mt-16 rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-lime-300 text-black"><BookOpen className="h-5 w-5" /></div><div><p className="text-sm font-semibold">Your learning workspace</p><p className="text-xs text-neutral-400">Progress, lessons, and next steps in one place.</p></div></div><div className="mt-5 h-2 rounded-full bg-white/10"><div className="h-full w-3/5 rounded-full bg-lime-300" /></div></div></div>
+          <div className="relative min-h-[460px] overflow-hidden rounded-[2rem] bg-neutral-900 p-7 text-white shadow-sm dark:bg-neutral-950 sm:p-10 lg:min-h-[500px]">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full border-[36px] border-lime-300/80" />
+            <div className="relative z-10 flex h-full flex-col">
+              <div>
+                <p className="eyebrow text-neutral-400">Learning capabilities</p>
+                <h2 className="mt-5 max-w-md text-4xl font-bold leading-[1.05] sm:text-[2.7rem]">A workspace built around how learning actually happens.</h2>
+              </div>
+              <div className="mt-auto rounded-2xl border border-white/15 bg-white/10 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.18)] backdrop-blur-md sm:p-6">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-lime-300 text-black"><BookOpen className="h-5 w-5" /></div>
+                  <div className="min-w-0"><p className="text-sm font-semibold">Your learning workspace</p><p className="truncate text-xs text-neutral-400">Progress, lessons, and next steps in one place.</p></div>
+                </div>
+                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full w-3/5 rounded-full bg-lime-300" /></div>
+              </div>
+            </div>
           </div>
           <div className="grid gap-4">
             <CapabilityBlock icon={Video} tone="lime" eyebrow="Video + PDF" title="Flexible lesson formats" description="Watch focused video lessons and use attached PDF resources." />
@@ -78,15 +91,15 @@ export function Home() {
       <section className="page-shell py-20 sm:py-28">
         <div className="mb-6 flex items-end justify-between gap-4"><div><p className="eyebrow">Learning paths</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">Go from curious to capable.</h2></div><Sparkles className="hidden h-6 w-6 text-lime-500 sm:block" /></div>
         <div className="grid gap-4 md:grid-cols-3">
-          {learningPaths.map((path) => <button key={path.title} type="button" onClick={() => navigate(`/courses?search=${encodeURIComponent(path.query)}`)} className="group rounded-2xl border border-neutral-200 bg-white p-6 text-left transition hover:-translate-y-1 hover:border-lime-400 dark:border-neutral-800 dark:bg-neutral-900"><span className="text-3xl">{path.icon}</span><h3 className="mt-5 text-xl font-bold text-neutral-950 dark:text-white">{path.title}</h3><p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{path.description}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">Explore path <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></button>)}
+          {learningPaths.map((path) => <button key={path.title} type="button" onClick={() => navigate(`/courses?search=${encodeURIComponent(path.query)}`)} className="group rounded-2xl border border-neutral-200 bg-white p-6 text-left transition hover:-translate-y-1 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-[#BEF264]"><span className="text-3xl">{path.icon}</span><h3 className="mt-5 text-xl font-bold text-neutral-950 transition-colors duration-200 dark:text-white dark:group-hover:text-[#BEF264]">{path.title}</h3><p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{path.description}</p><span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-neutral-900 transition-colors duration-200 dark:text-white dark:group-hover:text-[#BEF264]">Explore path <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></button>)}
         </div>
       </section>
 
       <CourseRail eyebrow="Free to start" title="Build momentum without a paywall." query={freeQuery} navigate={navigate} hideWhenEmpty emptyTitle="No free courses yet" emptyDescription="Free courses will appear here as instructors publish them." />
 
       <section className="page-shell py-20 sm:py-28">
-        <div className="grid items-stretch gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-3xl border border-neutral-200 bg-white p-7 dark:border-neutral-800 dark:bg-neutral-900 sm:p-10">
+        <div className="grid items-start gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="h-[500px] overflow-hidden rounded-3xl border border-neutral-200 bg-white p-7 dark:border-neutral-800 dark:bg-neutral-900 sm:p-10">
             <p className="eyebrow">FAQ</p>
             <h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">Questions, answered simply.</h2>
             <div className="mt-6 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
@@ -102,7 +115,7 @@ export function Home() {
             </div>
           </div>
 
-          <div className="flex flex-col justify-between rounded-3xl bg-[#171717] p-7 text-white dark:bg-neutral-950 sm:p-10">
+          <div className="flex h-[500px] flex-col justify-between rounded-3xl bg-[#171717] p-7 text-white dark:bg-neutral-950 sm:p-10">
             <div>
               <p className="eyebrow text-lime-300">For instructors</p>
               <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Your knowledge can move someone forward.</h2>
@@ -140,7 +153,7 @@ function CategorySkeletons() {
 
 function TrendingCourses({ query, navigate }) {
   const items = getItems(query.data).slice(0, 6);
-  return <section className="page-shell py-20 sm:py-28"><div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting now.</h2></div>{items.length > 0 ? <Button variant="outline" onClick={() => navigate("/courses")}>View all</Button> : null}</div>{query.isLoading ? <LoadingSpinner /> : query.isError ? <ErrorState description="We could not load trending courses right now." onRetry={() => query.refetch()} /> : items.length === 0 ? <EmptyState title="No trending courses yet" description="Published courses will appear here as learners discover them." icon={BookOpen} actionLabel="Browse courses" onAction={() => navigate("/courses")} /> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full items-center gap-4 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px]"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}</section>;
+  return <section className="page-shell py-20 sm:py-28"><div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end"><div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting this week.</h2></div>{items.length > 0 ? <Button variant="outline" onClick={() => navigate("/courses")}>View all</Button> : null}</div>{query.isLoading ? <LoadingSpinner /> : query.isError ? <ErrorState description="We could not load trending courses right now." onRetry={() => query.refetch()} /> : items.length === 0 ? <EmptyState title="No trending courses yet" description="Published courses will appear here as learners discover them." icon={BookOpen} actionLabel="Browse courses" onAction={() => navigate("/courses")} /> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full grid-cols-[32px_64px_minmax(0,1fr)_20px] items-center gap-3 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px] sm:gap-4"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Skillnest Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}</section>;
 }
 
 function TrendingCoursesToggle({ query, navigate }) {
@@ -153,14 +166,14 @@ function TrendingCoursesToggle({ query, navigate }) {
 
   return (
     <section className="page-shell py-20 sm:py-28">
-      <div className="flex items-end justify-between gap-4">
-        <div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting now.</h2></div>
+      <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end sm:gap-4">
+        <div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting this week.</h2></div>
         <Button variant="outline" className="shrink-0 gap-2" onClick={() => setCardView((current) => !current)}>
           {cardView ? <List aria-hidden="true" className="h-4 w-4" /> : <LayoutGrid aria-hidden="true" className="h-4 w-4" />}
-          {cardView ? "Use compact list" : "Explore as cards"}
+          {cardView ? "View as list" : "View as cards"}
         </Button>
       </div>
-      {cardView ? <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">{items.map((course) => <CourseCard key={course._id} course={course} href={`/courses/${course.slug}`} actionLabel="Explore" />)}</div> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full items-center gap-4 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px]"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-16 rounded-xl object-cover" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}
+      {cardView ? <div className="mt-8 grid items-stretch gap-8 md:grid-cols-2 xl:grid-cols-3">{items.map((course) => <CourseCard key={course._id} course={course} href={`/courses/${course.slug}`} actionLabel="View course" />)}</div> : <div className="mt-8 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">{items.map((course, index) => <button type="button" key={course._id} onClick={() => navigate(`/courses/${course.slug}`)} className="group grid w-full grid-cols-[28px_56px_minmax(0,1fr)_16px] items-center gap-2 py-5 text-left transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 dark:hover:bg-neutral-900 sm:grid-cols-[48px_64px_1fr_auto_auto_20px] sm:gap-4"><span className="font-mono text-xs text-neutral-400">{String(index + 1).padStart(2, "0")}</span><img src={course.thumbnailUrl || getCourseArtwork(course, "wide")} alt="" loading="lazy" className="h-14 w-14 rounded-xl object-cover sm:h-14 sm:w-16" /><span className="min-w-0"><span className="block truncate font-semibold text-neutral-950 dark:text-white">{course.title}</span><span className="mt-1 block truncate text-sm text-neutral-500 dark:text-neutral-400">{course.instructor?.name || course.instructorName || "Skillnest Instructor"}</span></span><span className="hidden text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400 md:block">{course.level || "Course"}</span><span className="hidden items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400 sm:flex"><span>{course.enrollmentCount || 0} learners</span><span>{Number(course.ratingAvg || 0).toFixed(1)} rating</span></span><ArrowUpRight aria-hidden="true" className="h-4 w-4 text-neutral-400 transition group-hover:text-lime-500" /></button>)}</div>}
     </section>
   );
 }
@@ -179,8 +192,8 @@ const learningPaths = [
 
 const faqs = [
   { question: "Can I learn at my own pace?", answer: "Yes. Enrollments stay in your account so you can return to lessons whenever you are ready." },
-  { question: "Are there free courses?", answer: "Yes. Coursify highlights published courses with a zero price in the Free to start section." },
-  { question: "Can I teach on Coursify?", answer: "Yes. Register as an instructor to create courses, organize lessons, and share your expertise." },
+  { question: "Are there free courses?", answer: `Yes. ${brand.name} highlights published courses with a zero price in the Free to start section.` },
+  { question: `Can I teach on ${brand.name}?`, answer: `Yes. Register as an instructor to create courses, organize lessons, and share your expertise.` },
   { question: "How do I track my progress?", answer: "The lesson player records completed lessons and shows your percentage on your dashboard and Continue Learning section." },
 ];
 

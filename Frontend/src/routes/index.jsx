@@ -10,6 +10,8 @@ import { Home } from "@/pages/public/Home";
 import { CourseList } from "@/pages/public/CourseList";
 import { CourseDetail } from "@/pages/public/CourseDetail";
 import { Checkout } from "@/pages/public/Checkout";
+import { NotesMarketplace } from "@/pages/public/NotesMarketplace";
+import { FocusPlaylists } from "@/pages/public/FocusPlaylists";
 import { Login } from "@/pages/public/Login";
 import { Register } from "@/pages/public/Register";
 import { ForgotPassword } from "@/pages/public/ForgotPassword";
@@ -42,6 +44,8 @@ export function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/courses" element={<CourseList />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
+        <Route path="/notes" element={<NotesMarketplace />} />
+        <Route path="/playlists" element={<FocusPlaylists />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

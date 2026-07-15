@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { useCheckout } from "@/hooks/useCheckout";
 import { getPreviousRoute } from "@/utils/routeHistory";
 import { formatPrice } from "@/utils/formatPrice";
+import { brand } from "@/utils/brand";
 
 function getCoursePrice(course) {
   const discounted = Number(course?.discountPrice || 0);
@@ -141,7 +142,7 @@ export function Checkout() {
                           <h3 className="text-lg font-semibold text-slate-950">{course.title}</h3>
                           <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
                             <User className="h-4 w-4" />
-                            {course.instructor?.name || course.instructorName || "Coursify Instructor"}
+                            {course.instructor?.name || course.instructorName || brand.instructorLabel}
                           </p>
                         </div>
                         <Badge variant="outline">Included</Badge>

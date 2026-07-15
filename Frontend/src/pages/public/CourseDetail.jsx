@@ -30,6 +30,7 @@ import { stripHtml } from "@/utils/sanitizeHtml";
 import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
 import { courseApi } from "@/services/api";
+import { brand } from "@/utils/brand";
 
 const reviewSchema = z.object({
   rating: z.coerce.number().min(1).max(5),
@@ -112,7 +113,7 @@ export function CourseDetail() {
               <StarRating value={course.ratingAvg || 0} />
               {Number(course.ratingAvg || 0).toFixed(1)} ({course.ratingCount || 0})
             </span>
-            <span>{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span>
+            <span>{course.instructor?.name || course.instructorName || brand.instructorLabel}</span>
             <span>{course.enrollmentCount || 0} enrolled</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">

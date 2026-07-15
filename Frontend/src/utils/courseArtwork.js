@@ -26,7 +26,7 @@ function escapeXml(value = "") {
 
 function splitTitle(title = "") {
   const words = String(title).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return ["Coursify", "Course"];
+  if (words.length === 0) return [brand.name, "Course"];
 
   const first = [];
   const second = [];
@@ -52,11 +52,11 @@ function splitTitle(title = "") {
   if (first.length === 0) first.push(words[0]);
   if (second.length === 0 && words.length > 1) second.push(words.slice(1).join(" "));
 
-  return [first[0] || "Coursify", second[0] || ""];
+  return [first[0] || brand.name, second[0] || ""];
 }
 
 export function getCourseArtwork(course = {}, variant = "card") {
-  const title = course.title || course.name || "Coursify Course";
+  const title = course.title || course.name || `${brand.name} Course`;
   const level = course.level || "Course";
   const seed = hashString(`${course._id || course.slug || title}`);
   const palette = PALETTES[seed % PALETTES.length];
@@ -92,9 +92,10 @@ export function getCourseArtwork(course = {}, variant = "card") {
         <tspan x="${textX}" dy="0">${escapeXml(line1)}</tspan>
         ${line2 ? `<tspan x="${textX}" dy="${Math.round(titleSize * 1.15)}">${escapeXml(line2)}</tspan>` : ""}
       </text>
-      <text x="${textX}" y="${height - 52}" font-family="Arial, sans-serif" font-size="${Math.round(titleSize * 0.42)}" font-weight="600" fill="rgba(255,255,255,0.88)">Coursify learning workspace</text>
+      <text x="${textX}" y="${height - 52}" font-family="Arial, sans-serif" font-size="${Math.round(titleSize * 0.42)}" font-weight="600" fill="rgba(255,255,255,0.88)">${brand.name} learning workspace</text>
     </svg>
   `;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg.replace(/\s+/g, " ").trim())}`;
 }
+import { brand } from "@/utils/brand";

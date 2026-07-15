@@ -1093,6 +1093,31 @@ const notificationService = {
   },
 };
 
+const platformService = {
+  async stats() {
+    const [students, instructors, courses, avatarUsers] = await Promise.all([
+      User.countDocuments({ role: "student", status: "active" }),
+      User.countDocuments({ role: "instructor", status: "active" }),
+      Course.countDocuments({ isPublished: true }),
+      User.find({
+        role: { $in: ["student", "instructor"] },
+        status: "active",
+        avatar: { $nin: ["", null] },
+      })
+        .select("avatar -_id")
+        .limit(4)
+        .lean(),
+    ]);
+
+    return {
+      students,
+      instructors,
+      courses,
+      avatars: avatarUsers.map(({ avatar }) => avatar).filter(Boolean),
+    };
+  },
+};
+
 module.exports = {
   sanitizeUser,
   buildTokens,
@@ -1108,6 +1133,7 @@ module.exports = {
   categoryService,
   couponService,
   notificationService,
+  platformService,
   upsertNotification,
   recalcCourseRatings,
   resolveCoursePrice,

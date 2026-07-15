@@ -5,6 +5,7 @@ import { formatPrice } from "@/utils/formatPrice";
 import { truncate } from "@/utils/truncate";
 import { BookOpen, Users } from "lucide-react";
 import { getCourseArtwork } from "@/utils/courseArtwork";
+import { brand } from "@/utils/brand";
 
 export function CourseCard({ course, href, actionLabel = "View Course", onAction }) {
   const price = course.discountPrice && course.discountPrice > 0 ? course.discountPrice : course.price;
@@ -12,8 +13,8 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
   const lessonCount = course.lessonCount || course.lessonsCount || course.sections?.reduce((count, section) => count + (section.lessons?.length || 0), 0) || 0;
 
   return (
-    <Card className="group flex h-[500px] flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-lime-400 hover:shadow-lg focus-within:ring-2 focus-within:ring-lime-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-lime-500 sm:h-[520px]">
-      <div className="relative isolate aspect-[4/3] overflow-hidden bg-neutral-900">
+    <Card className="group flex h-full min-h-[500px] flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-lime-400 hover:shadow-lg focus-within:ring-2 focus-within:ring-lime-400 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-lime-500">
+      <div className="relative isolate aspect-[16/10] overflow-hidden bg-neutral-900">
         <img
           src={course.thumbnailUrl || getCourseArtwork(course)}
           alt={course.title}
@@ -49,7 +50,7 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-          <span className="truncate">{course.instructor?.name || course.instructorName || "Coursify Instructor"}</span>
+          <span className="truncate">{course.instructor?.name || course.instructorName || brand.instructorLabel}</span>
           <span className="flex shrink-0 items-center gap-1">
             <StarRating value={course.ratingAvg || course.rating || 0} />
             <span>{Number(course.ratingAvg || course.rating || 0).toFixed(1)}</span>
@@ -67,7 +68,7 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold tracking-tight text-neutral-950 dark:text-white">{formatPrice(price)}</span>
@@ -77,11 +78,11 @@ export function CourseCard({ course, href, actionLabel = "View Course", onAction
             </div>
           </div>
           {href ? (
-            <Button asChild className="rounded-full px-4">
+              <Button asChild className="rounded-full px-4 transition-transform group-hover:scale-[1.02]">
               <Link to={href}>{actionLabel}</Link>
             </Button>
           ) : (
-            <Button onClick={onAction} className="rounded-full px-4">
+            <Button onClick={onAction} className="rounded-full px-4 transition-transform group-hover:scale-[1.02]">
               {actionLabel}
             </Button>
           )}

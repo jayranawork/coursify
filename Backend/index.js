@@ -14,6 +14,7 @@ const orderRoutes = require("./routes/orders");
 const socialRoutes = require("./routes/social");
 const dashboardRoutes = require("./routes/dashboards");
 const uploadRoutes = require("./routes/uploads");
+const platformRoutes = require("./routes/platform");
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api", socialRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/platform", platformRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

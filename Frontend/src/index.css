@@ -4,9 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes announcement-scroll {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (max-width: 639px) {
+  .announcement-marquee {
+    animation: announcement-scroll 12s linear infinite;
+  }
+}
+
 @layer base {
   html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
   }
 
   body {

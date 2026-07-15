@@ -383,6 +383,13 @@ export const dashboardApi = {
   },
 };
 
+export const platformApi = {
+  async stats() {
+    const response = await api.get("/platform/stats");
+    return unwrap(response);
+  },
+};
+
 export const uploadApi = {
   async uploadImage({ dataUrl, folder = "avatars", publicId }) {
     const response = await api.post("/uploads/image", { dataUrl, folder, publicId });

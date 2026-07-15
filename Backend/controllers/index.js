@@ -13,6 +13,7 @@ const {
   categoryService,
   couponService,
   notificationService,
+  platformService,
 } = require("../services");
 const uploadService = require("../services/upload");
 
@@ -295,6 +296,13 @@ const adminController = {
   }),
 };
 
+const platformController = {
+  stats: asyncHandler(async (req, res) => {
+    const data = await platformService.stats();
+    send(res, data);
+  }),
+};
+
 module.exports = {
   authController,
   userController,
@@ -311,4 +319,5 @@ module.exports = {
   uploadController,
   instructorController,
   adminController,
+  platformController,
 };

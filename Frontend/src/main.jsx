@@ -6,6 +6,10 @@ import App from "./App";
 import "./index.css";
 import { Toaster } from "sonner";
 
+if ("scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
+
 if (localStorage.getItem("coursify_theme") === "dark") {
   document.documentElement.classList.add("dark");
 }

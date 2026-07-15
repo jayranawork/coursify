@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { brand } from "@/utils/brand";
 import { authApi, setStoredRefreshToken } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Card, Input, Label } from "@/components/ui";
@@ -46,7 +47,7 @@ export function Login() {
       <Card className="w-full max-w-md border-slate-200 p-6">
         <div className="text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Welcome back</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-950">Sign in to Coursify</h1>
+          <h1 className="mt-2 text-3xl font-black text-slate-950">Sign in to {brand.name}</h1>
         </div>
         <form className="mt-8 space-y-4" onSubmit={submit}>
           <div className="space-y-2">
