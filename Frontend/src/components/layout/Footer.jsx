@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
-  BookOpen,
   Github,
   Instagram,
   Linkedin,
@@ -9,6 +8,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { brand } from "@/utils/brand";
+import fireLogo from "../../../assets/fire.gif";
 
 const footerGroups = [
   {
@@ -59,9 +59,9 @@ export function Footer() {
       <div className="page-shell px-6 pb-8 pt-16 sm:pt-20 lg:pt-24">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-8">
           <motion.div variants={riseItem} className="space-y-7 lg:col-span-5 xl:col-span-4">
-            <Link to="/" className="inline-flex items-center gap-3 text-neutral-950 dark:text-neutral-100">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-950 text-white dark:bg-white dark:text-neutral-950">
-                <BookOpen className="h-4 w-4" />
+            <Link to="/" className="group inline-flex items-center gap-3 text-neutral-950 dark:text-neutral-100">
+              <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm ring-1 ring-black/10 transition-transform duration-200 group-hover:scale-105 dark:ring-white/10">
+                <img src={fireLogo} alt="" className="h-full w-full object-contain" />
               </span>
               <span className="text-lg font-semibold tracking-tight">{brand.name}</span>
             </Link>

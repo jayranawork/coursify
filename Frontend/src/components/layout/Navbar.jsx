@@ -142,7 +142,7 @@ export function Navbar() {
         <div className="page-shell">
           <div className="mx-auto flex min-h-[56px] w-full items-center gap-2 rounded-full border border-neutral-200 bg-white/95 px-2 shadow-sm backdrop-blur transition-colors dark:border-neutral-800 dark:bg-neutral-950/95 sm:gap-4 sm:px-3">
             <Link to="/" onClick={handleBrandClick} className="group order-1 flex shrink-0 items-center gap-2 font-semibold text-neutral-950 dark:text-white">
-              <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm ring-1 ring-black/10 transition-all duration-200 group-hover:scale-105 dark:ring-white/10 sm:rounded-lg"><img src={fireLogo} alt="" className="h-full w-full object-contain" /></span>
+              <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-sm ring-1 ring-black/10 transition-all duration-200 group-hover:scale-105 dark:ring-white/10"><img src={fireLogo} alt="" className="h-full w-full object-contain" /></span>
               <span className="text-base font-bold tracking-[-0.02em] text-[#84CC16] transition-colors duration-200 group-hover:text-[#65A30D] dark:text-white dark:group-hover:text-[#BEF264] sm:text-lg">{brand.name}</span>
             </Link>
 
