@@ -303,6 +303,8 @@ const platformController = {
   }),
 };
 
+const playlistController = require("./playlists");
+
 module.exports = {
   authController,
   userController,
@@ -320,4 +322,5 @@ module.exports = {
   instructorController,
   adminController,
   platformController,
+  playlistController,
 };

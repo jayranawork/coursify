@@ -51,6 +51,14 @@ const DEMO = {
     avatar: "https://api.dicebear.com/9.x/initials/svg?seed=Priya%20Sharma",
     bio: "Curious learner exploring frontend, backend, and data skills.",
   },
+  defaultUser: {
+    name: "Default User",
+    email: "test@coursify.com",
+    password: "Test@1234",
+    role: "student",
+    avatar: "https://api.dicebear.com/9.x/initials/svg?seed=Default%20User",
+    bio: "Default testing account for local development.",
+  },
 };
 
 const demoCategories = [
@@ -529,6 +537,7 @@ async function main() {
   const instructor = await upsertUser(DEMO.instructor);
   const instructor2 = await upsertUser(DEMO.instructor2);
   const student = await upsertUser(DEMO.student);
+  const defaultUser = await upsertUser(DEMO.defaultUser);
 
   const categories = new Map();
   for (const category of demoCategories) {
@@ -725,6 +734,7 @@ async function main() {
       instructor: DEMO.instructor.email,
       instructor2: DEMO.instructor2.email,
       student: DEMO.student.email,
+      defaultUser: DEMO.defaultUser.email,
     },
     coupon: demoCoupon.code,
     courses: Array.from(courses.values()).map((course) => course.slug),

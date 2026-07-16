@@ -390,6 +390,33 @@ export const platformApi = {
   },
 };
 
+export const playlistApi = {
+  async import(payload) {
+    const response = await api.post("/playlists/import", payload);
+    return unwrap(response);
+  },
+  async listMine(query = {}) {
+    const response = await api.get("/playlists/me", { params: query });
+    return unwrap(response);
+  },
+  async getById(id) {
+    const response = await api.get(`/playlists/${id}`);
+    return unwrap(response);
+  },
+  async watch(id) {
+    const response = await api.get(`/playlists/${id}/watch`);
+    return unwrap(response);
+  },
+  async updateProgress(id, payload) {
+    const response = await api.patch(`/playlists/${id}/progress`, payload);
+    return unwrap(response);
+  },
+  async refresh(id) {
+    const response = await api.post(`/playlists/${id}/refresh`);
+    return unwrap(response);
+  },
+};
+
 export const uploadApi = {
   async uploadImage({ dataUrl, folder = "avatars", publicId }) {
     const response = await api.post("/uploads/image", { dataUrl, folder, publicId });

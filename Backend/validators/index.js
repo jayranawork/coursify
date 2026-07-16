@@ -158,6 +158,36 @@ const lessonAccessSchema = z.object({
   lessonId: objectId,
 });
 
+const playlistImportSchema = z.object({
+  url: z
+    .string()
+    .min(1)
+    .max(2000)
+    .refine((value) => Boolean(value && /(?:youtube\.com|youtu\.be)/i.test(value) && /[?&]list=|^[A-Za-z0-9_-]{10,}$/.test(value)), {
+      message: "Enter a valid YouTube playlist URL",
+    }),
+});
+
+const playlistIdSchema = z.object({
+  id: objectId,
+});
+
+const playlistProgressSchema = z.object({
+  videoId: objectId,
+  currentTimeSeconds: z.coerce.number().min(0),
+  durationSeconds: z.coerce.number().min(0).optional(),
+  isWatched: z.boolean().optional(),
+});
+
+const playlistListSchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  search: z.string().max(120).optional(),
+  status: z.enum(["active", "completed", "all"]).optional(),
+  sortBy: z.enum(["updatedAt", "createdAt", "title", "progressPercent", "videoCount"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+});
+
 module.exports = {
   objectId,
   pagination,
@@ -184,4 +214,8 @@ module.exports = {
   uploadPublicImageSchema,
   uploadLessonFileSchema,
   lessonAccessSchema,
+  playlistImportSchema,
+  playlistIdSchema,
+  playlistProgressSchema,
+  playlistListSchema,
 };

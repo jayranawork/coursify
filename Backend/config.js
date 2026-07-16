@@ -22,6 +22,7 @@ const config = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   frontendUrl: process.env.FRONTEND_URL || "",
+  youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   lemonSqueezyApiKey: process.env.LEMONSQUEEZY_API_KEY || "",
   lemonSqueezyStoreId: process.env.LEMONSQUEEZY_STORE_ID || "",
   lemonSqueezyVariantId: process.env.LEMONSQUEEZY_VARIANT_ID || "",

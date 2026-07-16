@@ -12,6 +12,9 @@ import { CourseDetail } from "@/pages/public/CourseDetail";
 import { Checkout } from "@/pages/public/Checkout";
 import { NotesMarketplace } from "@/pages/public/NotesMarketplace";
 import { FocusPlaylists } from "@/pages/public/FocusPlaylists";
+import { PlaylistImport } from "@/pages/public/PlaylistImport";
+import { PlaylistDetail } from "@/pages/public/PlaylistDetail";
+import { PlaylistWatch } from "@/pages/public/PlaylistWatch";
 import { Login } from "@/pages/public/Login";
 import { Register } from "@/pages/public/Register";
 import { ForgotPassword } from "@/pages/public/ForgotPassword";
@@ -45,13 +48,45 @@ export function AppRoutes() {
         <Route path="/courses" element={<CourseList />} />
         <Route path="/courses/:slug" element={<CourseDetail />} />
         <Route path="/notes" element={<NotesMarketplace />} />
-        <Route path="/playlists" element={<FocusPlaylists />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/playlists"
+          element={
+            <ProtectedRoute>
+              <FocusPlaylists />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/playlists/import"
+          element={
+            <ProtectedRoute>
+              <PlaylistImport />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/playlists/:id"
+          element={
+            <ProtectedRoute>
+              <PlaylistDetail />
+            </ProtectedRoute>
+          }
+        />
       </Route>
+
+      <Route
+        path="/playlists/:id/watch"
+        element={
+          <ProtectedRoute>
+            <PlaylistWatch />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/student"

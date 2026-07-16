@@ -184,6 +184,51 @@ const courseProgressSchema = new Schema(
 
 courseProgressSchema.index({ userId: 1, courseId: 1, lessonId: 1 }, { unique: true });
 
+const importedPlaylistSchema = new Schema(
+  {
+    userId: { type: ObjectId, required: true, index: true },
+    youtubePlaylistId: { type: String, required: true, index: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    thumbnailUrl: { type: String, default: "" },
+    channelTitle: { type: String, default: "" },
+    videoCount: { type: Number, default: 0, min: 0 },
+    totalDuration: { type: Number, default: 0, min: 0 },
+    lastWatchedVideoId: { type: ObjectId, default: null },
+    lastWatchedIndex: { type: Number, default: 0, min: 0 },
+    lastWatchedSeconds: { type: Number, default: 0, min: 0 },
+    progressPercent: { type: Number, default: 0, min: 0, max: 100 },
+    status: {
+      type: String,
+      enum: ["active", "completed"],
+      default: "active",
+      index: true,
+    },
+    isAvailable: { type: Boolean, default: true, index: true },
+  },
+  { timestamps: true }
+);
+
+importedPlaylistSchema.index({ userId: 1, youtubePlaylistId: 1 }, { unique: true });
+
+const importedPlaylistVideoSchema = new Schema(
+  {
+    playlistId: { type: ObjectId, required: true, index: true },
+    youtubeVideoId: { type: String, required: true, index: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: "" },
+    thumbnailUrl: { type: String, default: "" },
+    durationSeconds: { type: Number, default: 0, min: 0 },
+    position: { type: Number, required: true, min: 1 },
+    watched: { type: Boolean, default: false, index: true },
+    lastPositionSeconds: { type: Number, default: 0, min: 0 },
+    isAvailable: { type: Boolean, default: true, index: true },
+  },
+  { timestamps: true }
+);
+
+importedPlaylistVideoSchema.index({ playlistId: 1, youtubeVideoId: 1 }, { unique: true });
+
 const couponSchema = new Schema(
   {
     code: { type: String, required: true, unique: true, index: true, uppercase: true, trim: true },
@@ -247,6 +292,10 @@ const OrderItem = mongoose.models.OrderItem || mongoose.model("OrderItem", order
 const Review = mongoose.models.Review || mongoose.model("Review", reviewSchema);
 const Wishlist = mongoose.models.Wishlist || mongoose.model("Wishlist", wishlistSchema);
 const CourseProgress = mongoose.models.CourseProgress || mongoose.model("CourseProgress", courseProgressSchema);
+const ImportedPlaylist =
+  mongoose.models.ImportedPlaylist || mongoose.model("ImportedPlaylist", importedPlaylistSchema);
+const ImportedPlaylistVideo =
+  mongoose.models.ImportedPlaylistVideo || mongoose.model("ImportedPlaylistVideo", importedPlaylistVideoSchema);
 const Coupon = mongoose.models.Coupon || mongoose.model("Coupon", couponSchema);
 const Notification = mongoose.models.Notification || mongoose.model("Notification", notificationSchema);
 const RefreshToken = mongoose.models.RefreshToken || mongoose.model("RefreshToken", refreshTokenSchema);
@@ -265,6 +314,8 @@ module.exports = {
   Review,
   Wishlist,
   CourseProgress,
+  ImportedPlaylist,
+  ImportedPlaylistVideo,
   Coupon,
   Notification,
   RefreshToken,
