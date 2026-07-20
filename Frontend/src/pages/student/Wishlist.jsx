@@ -35,7 +35,7 @@ export function Wishlist() {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h1 className="text-3xl font-black text-slate-950">Wishlist</h1>
+        <h1 className="text-3xl font-black text-slate-950 dark:text-white">Wishlist</h1>
       </Card>
       {items.length === 0 ? (
         <EmptyState title="Wishlist is empty" description="Save courses to come back to them later." icon={Heart} />
@@ -47,8 +47,8 @@ export function Wishlist() {
                 <div className="flex gap-4">
                   <img src={course.thumbnailUrl || getCourseArtwork(course)} alt={course.title} className="h-20 w-32 rounded-xl object-cover" />
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-950">{course.title}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{course.shortDescription || course.description}</p>
+                    <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{course.title}</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">{course.shortDescription || course.description}</p>
                   </div>
                 </div>
                 <Button variant="outline" onClick={() => remove(normalizeId(course._id))}>

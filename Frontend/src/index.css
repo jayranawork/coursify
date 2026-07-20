@@ -15,7 +15,7 @@
 
 @media (max-width: 639px) {
   .announcement-marquee {
-    animation: announcement-scroll 12s linear infinite;
+    animation: announcement-scroll 6s linear infinite;
   }
 }
 

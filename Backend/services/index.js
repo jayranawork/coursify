@@ -146,6 +146,49 @@ const getCouponDiscountAmount = (coupon, subtotal = 0) => {
   return Math.min(normalizedSubtotal, coupon.value);
 };
 
+const releaseCouponReservation = async (code) => {
+  if (!code) return;
+
+  await Coupon.updateOne(
+    { code: String(code).toUpperCase(), reservedCount: { $gt: 0 } },
+    { $inc: { reservedCount: -1 } }
+  );
+};
+
+const releaseExpiredCouponReservations = async () => {
+  const expiredOrders = await Order.find({
+    status: "pending",
+    couponCode: { $nin: ["", null] },
+    couponReservationExpiresAt: { $lte: new Date() },
+    $or: [{ couponReservationReleased: false }, { couponReservationReleased: { $exists: false } }],
+  })
+    .select("_id couponCode")
+    .lean();
+
+  await Promise.all(
+    expiredOrders.map(async (expiredOrder) => {
+      const releasedOrder = await Order.findOneAndUpdate(
+        {
+          _id: expiredOrder._id,
+          status: "pending",
+          $or: [{ couponReservationReleased: false }, { couponReservationReleased: { $exists: false } }],
+        },
+        {
+          $set: {
+            couponReservationReleased: true,
+            couponReservationExpiresAt: null,
+          },
+        },
+        { new: true }
+      );
+
+      if (releasedOrder) {
+        await releaseCouponReservation(releasedOrder.couponCode);
+      }
+    })
+  );
+};
+
 const pickCourseUpdates = (payload) => {
   const updates = {};
   const fields = [
@@ -220,6 +263,8 @@ const pickCouponPayload = (payload) => {
 };
 
 const getActiveCouponByCode = async (code) => {
+  await releaseExpiredCouponReservations();
+
   const coupon = await Coupon.findOne({ code: String(code).toUpperCase(), isActive: true });
   if (!coupon) {
     throw new ApiError(404, "Coupon not found");
@@ -227,11 +272,141 @@ const getActiveCouponByCode = async (code) => {
   if (coupon.expiresAt && coupon.expiresAt < new Date()) {
     throw new ApiError(400, "Coupon has expired");
   }
-  if (coupon.redeemedCount >= coupon.maxRedemptions) {
+  if ((coupon.redeemedCount || 0) + (coupon.reservedCount || 0) >= coupon.maxRedemptions) {
     throw new ApiError(400, "Coupon redemption limit reached");
   }
 
   return coupon;
+};
+
+const assertCouponNotUsedByUser = async (userId, code) => {
+  if (!userId || !code) return;
+
+  const normalizedCode = String(code).toUpperCase();
+  const existingRedemption = await Order.findOne({
+    userId,
+    couponCode: normalizedCode,
+    status: { $in: ["paid", "refunded"] },
+  })
+    .select("_id")
+    .lean();
+
+  if (existingRedemption) {
+    throw new ApiError(400, "This coupon has already been used on your account");
+  }
+};
+
+const reserveCoupon = async (code) => {
+  const coupon = await getActiveCouponByCode(code);
+  const reservedCoupon = await Coupon.findOneAndUpdate(
+    {
+      _id: coupon._id,
+      $expr: {
+        $lt: [
+          { $add: [{ $ifNull: ["$redeemedCount", 0] }, { $ifNull: ["$reservedCount", 0] }] },
+          "$maxRedemptions",
+        ],
+      },
+    },
+    { $inc: { reservedCount: 1 } },
+    { new: true }
+  );
+
+  if (!reservedCoupon) {
+    throw new ApiError(400, "Coupon redemption limit reached");
+  }
+
+  return reservedCoupon;
+};
+
+const releaseOrderCouponReservation = async (order) => {
+  if (!order?.couponCode || order.couponRedeemedAt || order.couponReservationReleased) {
+    return;
+  }
+
+  const releasedOrder = await Order.findOneAndUpdate(
+    { _id: order._id, couponReservationReleased: false },
+    {
+      $set: {
+        couponReservationReleased: true,
+        couponReservationExpiresAt: null,
+      },
+    },
+    { new: true }
+  );
+
+  if (releasedOrder) {
+    await releaseCouponReservation(releasedOrder.couponCode);
+  }
+};
+
+const finalizeCouponRedemption = async (order) => {
+  if (!order?.couponCode || order.couponRedeemedAt) return;
+
+  const filter = {
+    code: String(order.couponCode).toUpperCase(),
+    isActive: true,
+    $expr: {
+      $lt: [{ $ifNull: ["$redeemedCount", 0] }, "$maxRedemptions"],
+    },
+  };
+
+  if (!order.couponReservationReleased) {
+    filter.reservedCount = { $gt: 0 };
+  } else {
+    filter.$expr = {
+      $lt: [
+        { $add: [{ $ifNull: ["$redeemedCount", 0] }, { $ifNull: ["$reservedCount", 0] }] },
+        "$maxRedemptions",
+      ],
+    };
+  }
+
+  const coupon = await Coupon.findOneAndUpdate(
+    filter,
+    [
+      {
+        $set: {
+          redeemedCount: { $add: [{ $ifNull: ["$redeemedCount", 0] }, 1] },
+          reservedCount: {
+            $max: [0, { $subtract: [{ $ifNull: ["$reservedCount", 0] }, 1] }],
+          },
+        },
+      },
+    ],
+    { new: true }
+  );
+
+  if (!coupon) {
+    throw new ApiError(409, "Coupon redemption could not be finalized after payment");
+  }
+
+  return coupon;
+};
+
+const ensureOrderEnrollments = async (order) => {
+  const orderItems = await OrderItem.find({ orderId: order._id });
+
+  for (const item of orderItems) {
+    const existingEnrollment = await Enrollment.findOne({ userId: order.userId, courseId: item.courseId });
+    if (existingEnrollment) continue;
+
+    await Enrollment.findOneAndUpdate(
+      { userId: order.userId, courseId: item.courseId },
+      {
+        $setOnInsert: {
+          userId: order.userId,
+          courseId: item.courseId,
+          status: "active",
+          progressPercent: 0,
+          completedLessonIds: [],
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    await Course.updateOne({ _id: item.courseId }, { $inc: { enrollmentCount: 1 } });
+  }
 };
 
 const courseSearchFilter = (query) => {
@@ -822,42 +997,50 @@ const orderService = {
 
     let discount = 0;
     let couponCode = "";
+    let couponReservationExpiresAt = null;
+    let couponReservationHeld = false;
     if (payload.couponCode) {
-      const coupon = await getActiveCouponByCode(payload.couponCode);
-      const redemption = await Coupon.updateOne(
-        {
-          _id: coupon._id,
-          redeemedCount: { $lt: coupon.maxRedemptions },
-        },
-        { $inc: { redeemedCount: 1 } }
-      );
-
-      if (!redemption.modifiedCount) {
-        throw new ApiError(400, "Coupon redemption limit reached");
-      }
-
+      await assertCouponNotUsedByUser(actor.id, payload.couponCode);
+      const coupon = await reserveCoupon(payload.couponCode);
       discount = getCouponDiscountAmount(coupon, subtotal);
       couponCode = coupon.code;
+      couponReservationExpiresAt = new Date(
+        Date.now() + config.couponReservationTtlMinutes * 60 * 1000
+      );
+      couponReservationHeld = true;
     }
 
     const amount = Math.max(subtotal - discount, 0);
-    const order = await Order.create({
-      userId: actor.id,
-      amount,
-      currency: payload.currency || "INR",
-      status: "pending",
-      paymentProvider: "lemon_squeezy",
-      paymentIntentId: "",
-      couponCode,
-    });
+    let order;
+    try {
+      order = await Order.create({
+        userId: actor.id,
+        amount,
+        currency: payload.currency || "INR",
+        status: "pending",
+        paymentProvider: "lemon_squeezy",
+        paymentIntentId: "",
+        couponCode,
+        couponReservationExpiresAt,
+        couponReservationReleased: !couponReservationHeld,
+      });
 
-    await OrderItem.insertMany(
-      courses.map((course) => ({
-        orderId: order._id,
-        courseId: course._id,
-        priceAtPurchase: resolveCoursePrice(course),
-      }))
-    );
+      await OrderItem.insertMany(
+        courses.map((course) => ({
+          orderId: order._id,
+          courseId: course._id,
+          priceAtPurchase: resolveCoursePrice(course),
+        }))
+      );
+    } catch (error) {
+      if (order) {
+        await releaseOrderCouponReservation(order);
+        await Order.updateOne({ _id: order._id }, { $set: { status: "failed" } });
+      } else if (couponReservationHeld) {
+        await releaseCouponReservation(couponCode);
+      }
+      throw error;
+    }
 
     let checkout;
     try {
@@ -871,19 +1054,26 @@ const orderService = {
         couponCode,
       });
     } catch (error) {
+      await releaseOrderCouponReservation(order);
       await Order.updateOne({ _id: order._id }, { $set: { status: "failed" } });
       throw error;
     }
 
-    await Order.updateOne(
-      { _id: order._id },
-      {
-        $set: {
-          paymentIntentId: checkout.checkoutId || "",
-          paymentProvider: "lemon_squeezy",
-        },
-      }
-    );
+    try {
+      await Order.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            paymentIntentId: checkout.checkoutId || "",
+            paymentProvider: "lemon_squeezy",
+          },
+        }
+      );
+    } catch (error) {
+      await releaseOrderCouponReservation(order);
+      await Order.updateOne({ _id: order._id }, { $set: { status: "failed" } });
+      throw error;
+    }
 
     return {
       ...order.toObject(),
@@ -908,60 +1098,52 @@ const orderService = {
     const orderId =
       customData?.order_id ||
       customData?.orderId ||
-      payload?.data?.attributes?.custom_data?.order_id ||
-      payload?.data?.attributes?.custom_data?.orderId;
+      payload?.attributes?.custom_data?.order_id ||
+      payload?.attributes?.custom_data?.orderId;
 
     if (!orderId) {
       throw new ApiError(400, "Webhook payload is missing order metadata");
     }
 
-    const order = await Order.findById(orderId);
+    let order = await Order.findById(orderId);
     if (!order) {
       throw new ApiError(404, "Order not found");
     }
 
     if (eventName === "order_refunded") {
+      await releaseOrderCouponReservation(order);
       order.status = "refunded";
       await order.save();
       return { ok: true, eventName, orderId: String(order._id), status: order.status };
     }
 
-    if (!["order_created", "order_paid", "order_updated"].includes(eventName)) {
+    if (eventName !== "order_created") {
       return { ok: true, skipped: true, eventName, orderId: String(order._id) };
     }
 
+    const providerStatus = payload?.attributes?.status || "";
+    if (providerStatus && providerStatus !== "paid") {
+      return { ok: true, skipped: true, eventName, orderId: String(order._id), status: providerStatus };
+    }
+
     if (order.status === "paid") {
+      await ensureOrderEnrollments(order);
       return { ok: true, alreadyProcessed: true, orderId: String(order._id), status: order.status };
     }
 
+    await releaseExpiredCouponReservations();
+    order = (await Order.findById(order._id)) || order;
+    await finalizeCouponRedemption(order);
+
     order.status = "paid";
     order.paymentProvider = "lemon_squeezy";
-    order.paymentIntentId = String(payload?.data?.id || order.paymentIntentId || "");
+    order.paymentIntentId = String(payload?.id || payload?.data?.id || order.paymentIntentId || "");
+    order.couponRedeemedAt = order.couponCode ? new Date() : null;
+    order.couponReservationReleased = true;
+    order.couponReservationExpiresAt = null;
     await order.save();
 
-    const orderItems = await OrderItem.find({ orderId: order._id });
-    for (const item of orderItems) {
-      const existingEnrollment = await Enrollment.findOne({ userId: order.userId, courseId: item.courseId });
-      if (existingEnrollment) {
-        continue;
-      }
-
-      await Enrollment.findOneAndUpdate(
-        { userId: order.userId, courseId: item.courseId },
-        {
-          $setOnInsert: {
-            userId: order.userId,
-            courseId: item.courseId,
-            status: "active",
-            progressPercent: 0,
-            completedLessonIds: [],
-          },
-        },
-        { new: true, upsert: true }
-      );
-
-      await Course.updateOne({ _id: item.courseId }, { $inc: { enrollmentCount: 1 } });
-    }
+    await ensureOrderEnrollments(order);
 
     return {
       ok: true,
@@ -1064,7 +1246,8 @@ const couponService = {
     return Coupon.find({}).sort({ createdAt: -1 });
   },
 
-  async validate(code, subtotal = 0) {
+  async validate(code, subtotal = 0, userId) {
+    await assertCouponNotUsedByUser(userId, code);
     const coupon = await getActiveCouponByCode(code);
     const discountAmount = getCouponDiscountAmount(coupon, subtotal);
     return {

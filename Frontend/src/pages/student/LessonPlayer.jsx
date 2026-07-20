@@ -73,17 +73,17 @@ export function LessonPlayer() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card className="h-fit border-slate-200 p-4 lg:sticky lg:top-24">
+      <Card className="h-fit border-slate-200 p-4 dark:border-neutral-800 lg:sticky lg:top-24">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{course.level}</p>
-          <h1 className="text-lg font-bold text-slate-950">{course.title}</h1>
+          <h1 className="text-lg font-bold text-slate-950 dark:text-white">{course.title}</h1>
           <Progress value={completionPercent} />
-          <p className="text-xs text-slate-500">{completionPercent}% complete</p>
+          <p className="text-xs text-slate-500 dark:text-neutral-400">{completionPercent}% complete</p>
         </div>
         <div className="mt-5 space-y-4">
           {sections.map((section) => (
-            <details key={section._id} open className="rounded-2xl border border-slate-200 p-3">
-              <summary className="cursor-pointer list-none font-medium text-slate-900">{section.title}</summary>
+            <details key={section._id} open className="rounded-2xl border border-slate-200 p-3 dark:border-neutral-800">
+              <summary className="cursor-pointer list-none font-medium text-slate-900 dark:text-white">{section.title}</summary>
               <div className="mt-3 space-y-2">
                 {(lessonsBySection[section._id] || []).map((lesson) => {
                   const completed = completedIds.has(normalizeId(lesson._id));
@@ -113,7 +113,7 @@ export function LessonPlayer() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Lesson player</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">{currentLesson?.title || "Select a lesson"}</h2>
+              <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{currentLesson?.title || "Select a lesson"}</h2>
             </div>
             <Badge variant="secondary">{completionPercent}%</Badge>
           </div>

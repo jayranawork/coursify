@@ -42,13 +42,13 @@ const createCheckout = async ({ amount, currency, orderId, userId, userEmail, co
       attributes: {
         custom_price: customPrice,
         checkout_data: {
-          email: userEmail || undefined,
+          ...(userEmail ? { email: userEmail } : {}),
           custom: {
             order_id: String(orderId),
             user_id: String(userId),
             course_ids: JSON.stringify(courseIds),
-            coupon_code: couponCode || "",
             currency: currency || "INR",
+            ...(couponCode ? { coupon_code: String(couponCode) } : {}),
           },
         },
         ...(Object.keys(productOptions).length ? { product_options: productOptions } : {}),

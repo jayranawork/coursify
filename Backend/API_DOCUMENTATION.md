@@ -627,11 +627,14 @@ Business logic:
 - calculates subtotal using discount price if available
 - validates the coupon if provided
 - applies the computed coupon discount if valid
-- increments coupon redemption count when a coupon is used
+- reserves a coupon slot while the order is pending
 - creates order and order items
 - creates a Lemon Squeezy checkout session
 - stores the checkout reference on the order
-- leaves order in `pending` status until the Lemon Squeezy webhook confirms payment
+- leaves order in `pending` status until the Lemon Squeezy `order_created` webhook confirms a paid order
+- converts the pending coupon reservation into `redeemedCount` only after payment confirmation
+- releases the reservation when checkout creation fails or the pending reservation expires
+- allows each authenticated student account to redeem a coupon code only once
 
 Request body:
 
@@ -662,9 +665,53 @@ Business logic:
 
 - verifies the `X-Signature` header against the raw request body
 - finds the matching order from webhook custom data
+- accepts the `order_created` event only when the provider status is `paid`
 - marks the order as `paid`
+- finalizes the coupon redemption reservation, if present
 - enrolls the student into all purchased courses
-- is idempotent on repeated webhook deliveries
+- is idempotent on repeated webhook deliveries and reconciles missing enrollments
+
+Webhook diagnostics are logged server-side without logging the signature or full
+payload. Each webhook log includes `eventName`, `orderId`, `providerStatus`, and
+`webhookResponseStatus`.
+
+All API requests also receive an `X-Request-Id` response header. The backend
+console prints matching structured records for `api.request`, `api.response`,
+and `api.error`, including method, URL, route, status, duration, user role,
+sanitized query/params/body, and the real server error stack when available.
+Passwords, tokens, cookies, signatures, raw bodies, and image data URLs are
+automatically redacted.
+
+Example error log shape:
+
+```json
+{
+  "event": "api.error",
+  "requestId": "request-id-from-response-header",
+  "method": "PUT",
+  "url": "/api/users/me",
+  "statusCode": 400,
+  "response": { "message": "Password must be at least 8 characters." },
+  "error": {
+    "name": "ApiError",
+    "message": "Validation failed",
+    "details": [{ "path": ["password"], "code": "too_small" }]
+  }
+}
+```
+
+Webhook response meanings:
+
+- `200`: webhook accepted, skipped, or already processed
+- `400`: missing order metadata, missing signature, or invalid payload
+- `401`: webhook secret/signature mismatch
+- `404`: the referenced local order does not exist
+- `500`: an unexpected backend or database error; the client receives a safe generic message
+
+The shared error handler also converts validation, authentication, authorization,
+rate-limit, provider, and unknown server errors into readable API messages. Raw
+database errors, stack traces, provider payloads, and secrets are kept in server
+logs only.
 
 ### GET `/api/orders/me`
 

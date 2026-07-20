@@ -1,54 +1,28 @@
 import { Moon, Sun } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/utils/cn";
 
-export function ThemeToggle({ className, isDark: controlledIsDark, onToggle }) {
-  const [internalIsDark, setInternalIsDark] = useState(true);
-  const isControlled = typeof controlledIsDark === "boolean";
-  const isDark = isControlled ? controlledIsDark : internalIsDark;
+export function ThemeToggle({ className, theme, isDark: legacyIsDark, onThemeChange, onToggle }) {
+  const isDark = theme ? theme === "dark" : Boolean(legacyIsDark);
 
   const toggle = () => {
-    if (onToggle) {
-      onToggle();
+    if (onThemeChange) {
+      onThemeChange(isDark ? "light" : "dark");
     } else {
-      setInternalIsDark((current) => !current);
-    }
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      toggle();
+      onToggle?.();
     }
   };
 
   return (
-    <div
-      className={cn(
-        "flex h-9 w-[68px] cursor-pointer rounded-full border p-1 transition-all duration-300",
-        isDark ? "border-zinc-800 bg-zinc-950" : "border-zinc-200 bg-white",
-        className
-      )}
+    <button
+      type="button"
+      className={cn("relative flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800", className)}
       onClick={toggle}
-      onKeyDown={handleKeyDown}
-      role="switch"
-      aria-checked={isDark}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      tabIndex={0}
+      aria-pressed={isDark}
     >
-      <div className="flex w-full items-center justify-between">
-        <div
-          className={cn(
-            "flex h-7 w-7 items-center justify-center rounded-full transition-transform duration-300",
-            isDark ? "translate-x-0 bg-zinc-800" : "translate-x-8 bg-gray-200"
-          )}
-        >
-          {isDark ? <Moon className="h-4 w-4 text-white" strokeWidth={1.5} /> : <Sun className="h-4 w-4 text-gray-700" strokeWidth={1.5} />}
-        </div>
-        <div className={cn("flex h-7 w-7 items-center justify-center rounded-full transition-transform duration-300", isDark ? "bg-transparent" : "-translate-x-8")}>
-          {isDark ? <Sun className="h-4 w-4 text-gray-500" strokeWidth={1.5} /> : <Moon className="h-4 w-4 text-black" strokeWidth={1.5} />}
-        </div>
-      </div>
-    </div>
+      <Sun className={cn("absolute h-[1.15rem] w-[1.15rem] transition-all", isDark ? "scale-0 -rotate-90" : "scale-100 rotate-0")} />
+      <Moon className={cn("absolute h-[1.15rem] w-[1.15rem] transition-all", isDark ? "scale-100 rotate-0" : "scale-0 rotate-90")} />
+      <span className="sr-only">Toggle theme</span>
+    </button>
   );
 }

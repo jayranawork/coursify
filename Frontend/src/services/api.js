@@ -21,24 +21,73 @@ export function setStoredRefreshToken(token) {
   }
 }
 
-function getErrorMessage(error) {
-  const response = error?.response?.data || {};
-  const validationErrors = Array.isArray(response.errors) ? response.errors : [];
+const readableFieldName = (path) =>
+  String(path || "")
+    .split(".")
+    .filter(Boolean)
+    .map((part) => part.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase()))
+    .join(" ");
 
-  if (validationErrors.length > 0) {
-    const messages = validationErrors
-      .map((item) => {
-        if (typeof item === "string") return item;
-        return item?.message || item?.msg || item?.reason || "";
-      })
-      .filter(Boolean);
+const formatValidationError = (item) => {
+  if (typeof item === "string") return item;
 
-    if (messages.length > 0) {
-      return messages.join(". ");
-    }
+  const field = readableFieldName(Array.isArray(item?.path) ? item.path.join(".") : item?.path);
+  if (item?.code === "too_small" && item?.type === "string") {
+    return `${field || "This field"} must be at least ${item.minimum} characters.`;
+  }
+  if (item?.code === "too_big" && item?.type === "string") {
+    return `${field || "This field"} must be no more than ${item.maximum} characters.`;
+  }
+  if (item?.code === "invalid_string" && item?.validation === "email") {
+    return `${field || "Email"} must be a valid email address.`;
+  }
+  if (item?.code === "invalid_type" && item?.received === "undefined") {
+    return `${field || "This field"} is required.`;
   }
 
-  return response.message || error?.message || "Something went wrong";
+  const message = item?.message || item?.msg || item?.reason;
+  return message ? (field ? `${field}: ${message}` : message) : "Please check the submitted information.";
+};
+
+const statusFallbackMessage = (status) => {
+  if (status === 400) return "The request could not be processed. Please check your information.";
+  if (status === 401) return "Your session is invalid or has expired. Please sign in again.";
+  if (status === 403) return "You do not have permission to perform this action.";
+  if (status === 404) return "The requested resource was not found.";
+  if (status === 409) return "This action conflicts with existing data.";
+  if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+  if (status === 502) return "The external service could not complete the request. Please try again.";
+  if (status === 503) return "This service is temporarily unavailable. Please try again later.";
+  if (status === 504) return "The request took too long. Please try again.";
+  return "Something went wrong on our side. Please try again.";
+};
+
+const isInternalErrorMessage = (message) =>
+  /Mongo|Mongoose|MongoServerError|TypeError|ReferenceError|SyntaxError|ECONN|ETIMEDOUT|at\s+\w+\s*\(/i.test(
+    String(message || "")
+  );
+
+function getErrorMessage(error) {
+  const response = error?.response?.data || {};
+  const status = error?.response?.status;
+  const validationErrors = Array.isArray(response.errors) ? response.errors : [];
+  const messages = validationErrors.map(formatValidationError).filter(Boolean);
+
+  if (messages.length > 0 && response.message === "Validation failed") {
+    return messages.join(". ");
+  }
+
+  if (response.message && !isInternalErrorMessage(response.message)) {
+    return response.message;
+  }
+
+  if (messages.length > 0) return messages.join(". ");
+  if (!error?.response) {
+    if (error?.code === "ERR_CANCELED") return "The request was canceled.";
+    return "Unable to reach the server. Please check your connection and try again.";
+  }
+
+  return statusFallbackMessage(status);
 }
 
 export function getApiErrorMessage(error) {

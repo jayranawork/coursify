@@ -16,6 +16,7 @@ const config = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   accessTokenTtl: "15m",
   refreshTokenTtl: "7d",
+  couponReservationTtlMinutes: Number(process.env.COUPON_RESERVATION_TTL_MINUTES || 30),
   bcryptSaltRounds: 12,
   corsOrigins: (process.env.CORS_ORIGINS || "")
     .split(",")

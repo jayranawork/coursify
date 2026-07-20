@@ -235,7 +235,7 @@ const couponController = {
     send(res, data);
   }),
   validate: asyncHandler(async (req, res) => {
-    const data = await couponService.validate(req.body.code, req.body.subtotal);
+    const data = await couponService.validate(req.body.code, req.body.subtotal, req.user.id);
     send(res, data);
   }),
 };

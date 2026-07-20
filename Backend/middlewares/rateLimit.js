@@ -1,3 +1,5 @@
+const ApiError = require("../utils/apiError");
+
 const buckets = new Map();
 
 const getClientKey = (req) => {
@@ -24,10 +26,7 @@ const rateLimit = ({ windowMs = 60_000, max = 10, message = "Too many requests, 
     }
 
     if (bucket.count >= max) {
-      return res.status(429).json({
-        success: false,
-        message,
-      });
+      return next(new ApiError(429, message));
     }
 
     bucket.count += 1;

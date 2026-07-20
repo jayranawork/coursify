@@ -21,7 +21,9 @@ This file groups the backend work by problem area.
 ## 3. Coupon and checkout behavior
 
 - [x] Return a computed discount result from coupon validation.
-- [x] Increment coupon `redeemedCount` when an order uses a valid coupon.
+- [x] Reserve a coupon slot while an order is pending.
+- [x] Convert the reservation into `redeemedCount` after a paid Lemon Squeezy webhook.
+- [x] Release coupon reservations when checkout fails, an order is refunded, or a pending reservation expires.
 - [x] Prevent invalid or expired coupons from being accepted.
 - [ ] Make sure order responses contain everything the frontend needs.
 
@@ -46,11 +48,10 @@ This file groups the backend work by problem area.
 
 ## 7. File storage and uploads
 
-- [ ] Add an image upload strategy, ideally Cloudinary.
-- [ ] Add S3-based upload strategy for videos and PDFs.
-- [ ] Add upload initiation and completion endpoints.
-- [ ] Avoid storing binary files in MongoDB.
-- [ ] Store only file URLs and metadata in the database.
+- [x] Add an image upload strategy through Cloudinary.
+- [x] Add S3-based upload initiation for videos and PDFs.
+- [x] Avoid storing binary files in MongoDB.
+- [x] Store file URLs and storage metadata in the database.
 
 ## 8. Streaming pipeline
 
@@ -70,7 +71,7 @@ This file groups the backend work by problem area.
 ## 10. Scalability and caching
 
 - [ ] Add indexes where read performance matters.
-- [ ] Move refresh token storage out of memory.
+- [x] Move refresh token storage to MongoDB.
 - [ ] Introduce caching for public course and category data.
 - [ ] Add queue-based processing for heavy work.
 - [ ] Plan read-replica support for future growth.

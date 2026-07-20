@@ -132,6 +132,9 @@ const orderSchema = new Schema(
     paymentProvider: { type: String, default: "manual" },
     paymentIntentId: { type: String, default: "" },
     couponCode: { type: String, default: "" },
+    couponReservationExpiresAt: { type: Date, default: null },
+    couponReservationReleased: { type: Boolean, default: false },
+    couponRedeemedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -236,6 +239,7 @@ const couponSchema = new Schema(
     value: { type: Number, required: true, min: 0 },
     maxRedemptions: { type: Number, default: 1 },
     redeemedCount: { type: Number, default: 0 },
+    reservedCount: { type: Number, default: 0 },
     expiresAt: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
   },

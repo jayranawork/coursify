@@ -5,6 +5,8 @@ const cors = require("cors");
 const config = require("./config");
 const { notFound, errorHandler } = require("./middlewares/error");
 const securityHeaders = require("./middlewares/security");
+const requestLogger = require("./middlewares/requestLogger");
+const { log } = require("./utils/logger");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -26,6 +28,7 @@ app.use(
   })
 );
 app.use(securityHeaders);
+app.use(requestLogger);
 app.use(
   express.json({
     limit: "10mb",
@@ -60,10 +63,12 @@ const start = async () => {
   try {
     await mongoose.connect(config.mongoUrl);
     app.listen(config.port, () => {
-      console.log(`Coursify API running on port ${config.port}`);
+      log("info", "server.started", { port: config.port });
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    log("error", "server.startup_error", {
+      error: { name: error?.name, message: error?.message, stack: error?.stack },
+    });
     process.exit(1);
   }
 };

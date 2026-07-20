@@ -4,17 +4,17 @@ This file is for problems that touch both frontend and backend.
 
 ## 1. Auth contract
 
-- [ ] Make sure login returns `user`, `accessToken`, and `refreshToken`.
-- [ ] Keep the refresh token key consistent across frontend storage and backend input.
-- [ ] Keep `Authorization: Bearer <token>` as the standard access-token header.
-- [ ] Keep token refresh logic in sync between Axios and backend auth routes.
+- [x] Login returns `user`, `accessToken`, and `refreshToken`.
+- [x] The frontend stores the refresh token and sends it to the backend refresh route.
+- [x] `Authorization: Bearer <token>` is the standard access-token header.
+- [x] Axios refresh logic is aligned with the backend auth routes.
 
 ## 2. Checkout contract
 
-- [ ] Make coupon validation return a backend shape the frontend can trust.
-- [ ] Make sure checkout can compute a real discount for fixed and percent coupons.
-- [ ] Decide whether auto-enrollment happens in backend, frontend, or both.
-- [ ] Keep order response shape stable so the checkout page can redirect safely.
+- [x] Coupon validation returns a computed discount result.
+- [x] Checkout computes fixed and percent discounts consistently with the backend.
+- [x] Auto-enrollment is owned by the backend after a paid Lemon Squeezy webhook.
+- [x] The order response includes a checkout URL for safe redirection.
 
 ## 3. Course contract
 

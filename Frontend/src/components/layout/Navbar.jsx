@@ -17,6 +17,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem("coursify_theme") || "light");
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("coursify_theme") === "dark");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,14 +37,15 @@ export function Navbar() {
   const isHomePage = location.pathname === "/";
   const unreadCount = useMemo(() => (notificationsQuery.data || []).filter((item) => !item.read).length, [notificationsQuery.data]);
 
-  const toggleTheme = () => {
-    setDarkMode((current) => {
-      const next = !current;
-      document.documentElement.classList.toggle("dark", next);
-      localStorage.setItem("coursify_theme", next ? "dark" : "light");
-      return next;
-    });
+  const handleThemeChange = (nextTheme) => {
+    const isNextDark = nextTheme === "dark" || (nextTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setThemeMode(nextTheme);
+    setDarkMode(isNextDark);
+    document.documentElement.classList.toggle("dark", isNextDark);
+    localStorage.setItem("coursify_theme", nextTheme);
   };
+
+  const toggleTheme = () => handleThemeChange(darkMode ? "light" : "dark");
 
   useEffect(() => {
     const onShortcut = (event) => {
@@ -138,7 +140,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className={`sticky inset-x-0 top-0 z-40 bg-transparent px-2 pt-2 sm:px-3 ${isHomePage ? "-mb-[64px]" : ""}`}>
+      <header className={`sticky relative inset-x-0 top-0 z-40 bg-transparent px-2 pt-2 sm:px-3 ${isHomePage ? "-mb-[64px]" : ""}`}>
         <div className="page-shell">
           <div className="mx-auto flex min-h-[56px] w-full items-center gap-2 rounded-full border border-neutral-200 bg-white/95 px-2 shadow-sm backdrop-blur transition-colors dark:border-neutral-800 dark:bg-neutral-950/95 sm:gap-4 sm:px-3">
             <Link to="/" onClick={handleBrandClick} className="group order-1 flex shrink-0 items-center gap-2 font-semibold text-neutral-950 dark:text-white">
@@ -188,7 +190,7 @@ export function Navbar() {
                 />
               ) : null}
               <div className="pl-1">
-                <ThemeToggle isDark={darkMode} onToggle={toggleTheme} />
+                <ThemeToggle theme={themeMode} onThemeChange={handleThemeChange} />
               </div>
             </div>
 
@@ -197,7 +199,7 @@ export function Navbar() {
           </div>
         </div>
 
-        {mobileOpen ? <div className="mx-2 mt-2 rounded-2xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-950 lg:hidden"><div className="page-shell space-y-3 py-4"><nav className="flex flex-col gap-1" aria-label="Mobile navigation"><MobileLink to="/courses" label="Courses" onClick={() => setMobileOpen(false)} /><MobileLink to="/notes" label="Study Vault" onClick={() => setMobileOpen(false)} /><MobileLink to="/playlists" label="Focus Room" onClick={() => setMobileOpen(false)} />{accessToken ? <MobileLink to={dashboardPath} label="My Learning" onClick={() => setMobileOpen(false)} /> : <><MobileLink to="/login" label="Login" onClick={() => setMobileOpen(false)} /><MobileLink to="/register" label="Register" onClick={() => setMobileOpen(false)} /></>}{accessToken ? <button className="rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-900" onClick={logout}>Logout</button> : null}<div className="flex items-center justify-between border-t border-neutral-200 pt-3 dark:border-neutral-800"><span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Theme</span><ThemeToggle isDark={darkMode} onToggle={toggleTheme} /></div></nav></div></div> : null}
+        {mobileOpen ? <div className="absolute left-2 right-2 top-[calc(100%+0.5rem)] z-50 rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950 lg:hidden"><div className="page-shell space-y-3 py-4"><nav className="flex flex-col gap-1" aria-label="Mobile navigation"><MobileLink to="/courses" label="Courses" onClick={() => setMobileOpen(false)} /><MobileLink to="/notes" label="Study Vault" onClick={() => setMobileOpen(false)} /><MobileLink to="/playlists" label="Focus Room" onClick={() => setMobileOpen(false)} />{accessToken ? <MobileLink to={dashboardPath} label="My Learning" onClick={() => setMobileOpen(false)} /> : <><MobileLink to="/login" label="Login" onClick={() => setMobileOpen(false)} /><MobileLink to="/register" label="Register" onClick={() => setMobileOpen(false)} /></>}{accessToken ? <button className="rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-900" onClick={logout}>Logout</button> : null}<div className="flex items-center justify-between border-t border-neutral-200 pt-3 dark:border-neutral-800"><span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Theme</span><ThemeToggle theme={themeMode} onThemeChange={handleThemeChange} /></div></nav></div></div> : null}
       </header>
 
       {searchOpen ? <SearchModal inputRef={searchInputRef} query={searchQuery} setQuery={setSearchQuery} results={searchResults} loading={searchLoading} error={searchError} selectedIndex={selectedSearchIndex} onKeyDown={handleSearchKeyDown} onSelect={selectSearchResult} onClose={closeSearch} /> : null}

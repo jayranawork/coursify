@@ -25,8 +25,8 @@ export function MyCourses() {
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h1 className="text-3xl font-black text-slate-950">My Courses</h1>
-        <p className="mt-2 text-slate-600">Resume your active learning paths.</p>
+        <h1 className="text-3xl font-black text-slate-950 dark:text-white">My Courses</h1>
+        <p className="mt-2 text-slate-600 dark:text-neutral-400">Resume your active learning paths.</p>
       </Card>
 
       {items.length === 0 ? (
@@ -39,8 +39,8 @@ export function MyCourses() {
                 <div className="flex gap-4">
                   <img src={course.thumbnailUrl || getCourseArtwork(course)} alt={course.title} className="h-20 w-32 rounded-xl object-cover" />
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-950">{course.title}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{course.shortDescription || course.description}</p>
+                    <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{course.title}</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-neutral-400">{course.shortDescription || course.description}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{course.level}</Badge>
                       <Badge variant={enrollment.status === "completed" ? "success" : "outline"}>{enrollment.status}</Badge>
@@ -49,7 +49,7 @@ export function MyCourses() {
                 </div>
                 <div className="w-full max-w-xs space-y-3">
                   <Progress value={enrollment.progressPercent || 0} />
-                  <div className="flex items-center justify-between text-sm text-slate-500">
+                  <div className="flex items-center justify-between text-sm text-slate-500 dark:text-neutral-400">
                     <span>{enrollment.progressPercent || 0}% complete</span>
                     <Button asChild size="sm">
                       <Link to={`/student/courses/${normalizeId(enrollment.courseId)}/learn`}>

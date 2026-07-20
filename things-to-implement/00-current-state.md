@@ -10,18 +10,20 @@ This file records what the project already does today and what is still incomple
 - Student pages exist for dashboard, courses, lesson player, orders, wishlist, and profile.
 - Instructor pages exist for dashboard, course list, course editor, and stats.
 - Admin pages exist for dashboard, users, courses, categories, coupons, and orders.
-- Checkout flow exists on the frontend and auto-enrolls after order placement.
+- Checkout flow exists on the frontend and redirects to Lemon Squeezy.
+- Successful Lemon Squeezy `order_created` webhooks mark orders paid and auto-enroll students.
 - Loading states, error states, and empty states are implemented across most screens.
 
 ## Partially working
 
-- Backend order creation does not auto-enroll the student.
+- Pending orders do not enroll students until payment is confirmed by the backend webhook.
+- Coupon slots are reserved for pending orders and redeemed only after payment confirmation.
 - Admin management pages are more list-and-action screens than full CRUD screens.
 - Some pages are still basic list/detail layouts instead of full management tools.
 
 ## Missing or weak areas
 
-- Finalized media access strategy for videos and PDFs.
+- Finalized media access strategy for HLS video delivery and long-term PDF delivery.
 - Chunked upload for large files.
 - HLS video processing and signed playback URLs.
 - Better caching and scale strategy for larger traffic.
@@ -36,7 +38,6 @@ This file records what the project already does today and what is still incomple
 
 ## Important risk notes
 
-- Refresh tokens are stored in memory, so they disappear on server restart.
-- Some user-generated content is rendered with `dangerouslySetInnerHTML`.
-- The frontend bundle is larger than ideal because the course editor is heavy.
+- Coupon reservations use lazy expiry cleanup; a background cleanup worker is still a future scale improvement.
+- The frontend bundle is larger than ideal because the course editor and public features are loaded together.
 - The current setup is functional for demo and development, but not yet production-hard.
