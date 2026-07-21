@@ -635,6 +635,7 @@ Business logic:
 - converts the pending coupon reservation into `redeemedCount` only after payment confirmation
 - releases the reservation when checkout creation fails or the pending reservation expires
 - allows each authenticated student account to redeem a coupon code only once
+- wraps local order, order-item, and coupon reservation writes in a MongoDB transaction
 
 Request body:
 
@@ -666,10 +667,12 @@ Business logic:
 - verifies the `X-Signature` header against the raw request body
 - finds the matching order from webhook custom data
 - accepts the `order_created` event only when the provider status is `paid`
+- reconciles the provider store, product or variant, currency, provider order ID, and paid amount before accepting payment
 - marks the order as `paid`
 - finalizes the coupon redemption reservation, if present
 - enrolls the student into all purchased courses
 - is idempotent on repeated webhook deliveries and reconciles missing enrollments
+- commits order status, coupon redemption, and enrollment changes in one MongoDB transaction
 
 Webhook diagnostics are logged server-side without logging the signature or full
 payload. Each webhook log includes `eventName`, `orderId`, `providerStatus`, and
@@ -712,6 +715,59 @@ The shared error handler also converts validation, authentication, authorization
 rate-limit, provider, and unknown server errors into readable API messages. Raw
 database errors, stack traces, provider payloads, and secrets are kept in server
 logs only.
+
+### GET `/api/orders/webhook-monitoring`
+
+Returns recent Lemon Squeezy webhook delivery records for troubleshooting.
+
+Role:
+
+- `admin`
+
+Optional query:
+
+- `limit`: number of records to return, capped at 200
+
+Each record includes the event name, provider and local order IDs when available,
+delivery status, attempt count, response status, timestamps, and a safe error
+summary. Signature values and full provider payloads are never stored.
+
+The backend also runs a maintenance worker after MongoDB connects. It checks for
+expired pending coupon reservations on a configurable interval and releases them
+so reserved coupon capacity becomes available again. Configure the interval with
+`COUPON_CLEANUP_INTERVAL_MS` (default: 60000 milliseconds).
+
+## Notes Marketplace API
+
+### GET `/api/notes`
+
+Lists published PDF notes. Supports optional `search`, `subject`, and `limit` query parameters.
+
+### GET `/api/notes/:slug`
+
+Returns public metadata for one published note. The storage key is never included in this response.
+
+### POST `/api/notes`
+
+Creates a note for an instructor or admin. The PDF must already be uploaded through
+`POST /api/uploads/lesson-file` with `folder: "notes"`; only keys beginning with
+`notes/` are accepted.
+
+### POST `/api/notes/:id/purchase`
+
+Creates a completed purchase record for a published free note. Paid notes currently
+return `402` until they are connected to a verified Lemon Squeezy checkout and webhook
+reconciliation flow. This prevents users from receiving paid content without payment.
+
+### GET `/api/notes/:id/download`
+
+Returns a short-lived S3 download URL only when the authenticated student owns the
+note, or when the requester is the note seller/admin. Download counters are updated
+server-side.
+
+### GET `/api/notes/purchases/me`
+
+Returns the authenticated student’s completed note purchases.
 
 ### GET `/api/orders/me`
 
@@ -999,12 +1055,15 @@ AWS_S3_BUCKET=your-coursify-bucket
 FRONTEND_URL=http://localhost:5173
 LEMONSQUEEZY_API_KEY=your_lemonsqueezy_api_key
 LEMONSQUEEZY_STORE_ID=your_store_id
+LEMONSQUEEZY_PRODUCT_ID=your_product_id
 LEMONSQUEEZY_VARIANT_ID=your_variant_id
 LEMONSQUEEZY_WEBHOOK_SECRET=your_webhook_secret
+LEMONSQUEEZY_AMOUNT_TOLERANCE_MINOR=100
 ```
 
 ## Notes
 
+- Payment transactions require MongoDB replica-set support. MongoDB Atlas provides this by default; local MongoDB must be started as a single-node replica set.
 - Refresh tokens are stored in MongoDB and rotated on refresh.
 - Image uploads now go through Cloudinary.
 - Lesson PDFs and videos use presigned S3 uploads.

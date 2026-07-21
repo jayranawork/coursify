@@ -7,6 +7,7 @@ const { notFound, errorHandler } = require("./middlewares/error");
 const securityHeaders = require("./middlewares/security");
 const requestLogger = require("./middlewares/requestLogger");
 const { log } = require("./utils/logger");
+const { startMaintenanceJobs } = require("./jobs/maintenance");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -18,6 +19,7 @@ const dashboardRoutes = require("./routes/dashboards");
 const uploadRoutes = require("./routes/uploads");
 const platformRoutes = require("./routes/platform");
 const playlistRoutes = require("./routes/playlists");
+const noteRoutes = require("./routes/notes");
 
 const app = express();
 
@@ -55,6 +57,7 @@ app.use("/api", dashboardRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/platform", platformRoutes);
 app.use("/api/playlists", playlistRoutes);
+app.use("/api/notes", noteRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -62,6 +65,7 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await mongoose.connect(config.mongoUrl);
+    startMaintenanceJobs();
     app.listen(config.port, () => {
       log("info", "server.started", { port: config.port });
     });
@@ -73,4 +77,8 @@ const start = async () => {
   }
 };
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = { app, start };

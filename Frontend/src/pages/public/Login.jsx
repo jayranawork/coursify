@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,7 @@ const schema = z.object({
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { accessToken, user, setAuth } = useAuth();
   const form = useForm({
     resolver: zodResolver(schema),
@@ -26,9 +27,9 @@ export function Login() {
 
   useEffect(() => {
     if (accessToken && user?.role) {
-      navigate(rolePath(user.role), { replace: true });
+      navigate(location.state?.from || rolePath(user.role), { replace: true });
     }
-  }, [accessToken, user, navigate]);
+  }, [accessToken, user, navigate, location.state]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -36,7 +37,7 @@ export function Login() {
       setStoredRefreshToken(data.refreshToken);
       setAuth(data.user, data.accessToken);
       toast.success("Welcome back");
-      navigate(rolePath(data.user.role), { replace: true });
+      navigate(location.state?.from || rolePath(data.user.role), { replace: true });
     } catch (error) {
       toast.error(getApiErrorMessage(error));
     }

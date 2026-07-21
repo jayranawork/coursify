@@ -150,8 +150,24 @@ const uploadPublicImageSchema = z.object({
 const uploadLessonFileSchema = z.object({
   fileName: z.string().min(1).max(200),
   contentType: z.enum(["application/pdf", "video/mp4", "video/webm", "video/quicktime", "video/mpeg"]),
-  folder: z.enum(["lessonVideos", "lessonPdfs"]).optional(),
+  folder: z.enum(["lessonVideos", "lessonPdfs", "notes"]).optional(),
 });
+
+const noteCreateSchema = z.object({
+  title: z.string().min(3).max(160),
+  description: z.string().min(10).max(2000),
+  subject: z.string().min(2).max(80),
+  price: z.coerce.number().min(0).max(100000).default(0),
+  fileKey: z.string().min(1).max(500),
+  fileName: z.string().min(1).max(200),
+  fileSize: z.coerce.number().int().min(0).max(100000000).optional(),
+  thumbnailUrl: z.string().url().or(z.literal("")).optional(),
+  isPublished: z.boolean().optional(),
+});
+
+const noteUpdateSchema = noteCreateSchema.partial();
+
+const noteIdSchema = z.object({ id: objectId });
 
 const lessonAccessSchema = z.object({
   id: objectId,
@@ -213,6 +229,9 @@ module.exports = {
   uploadImageSchema,
   uploadPublicImageSchema,
   uploadLessonFileSchema,
+  noteCreateSchema,
+  noteUpdateSchema,
+  noteIdSchema,
   lessonAccessSchema,
   playlistImportSchema,
   playlistIdSchema,

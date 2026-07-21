@@ -100,28 +100,39 @@ function unwrap(response) {
 
 let refreshPromise = null;
 
-export async function refreshSession() {
-  const refreshToken = getStoredRefreshToken();
-  if (!refreshToken) {
-    throw new Error("No refresh token available");
-  }
+export function refreshSession() {
+  if (refreshPromise) return refreshPromise;
 
-  const { data } = await api.post(
-    "/auth/refresh",
-    { refreshToken },
-    { skipAuthRefresh: true }
+  const promise = (async () => {
+    const refreshToken = getStoredRefreshToken();
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+
+    const { data } = await api.post(
+      "/auth/refresh",
+      { refreshToken },
+      { skipAuthRefresh: true }
+    );
+
+    const payload = data?.data ?? {};
+    if (payload.refreshToken) {
+      setStoredRefreshToken(payload.refreshToken);
+    }
+
+    if (payload.user && payload.accessToken) {
+      useAuthStore.getState().setAuth(payload.user, payload.accessToken);
+    }
+
+    return payload;
+  })();
+
+  refreshPromise = promise;
+  promise.then(
+    () => { if (refreshPromise === promise) refreshPromise = null; },
+    () => { if (refreshPromise === promise) refreshPromise = null; }
   );
-
-  const payload = data?.data ?? {};
-  if (payload.refreshToken) {
-    setStoredRefreshToken(payload.refreshToken);
-  }
-
-  if (payload.user && payload.accessToken) {
-    useAuthStore.getState().setAuth(payload.user, payload.accessToken);
-  }
-
-  return payload;
+  return promise;
 }
 
 api.interceptors.request.use((config) => {
@@ -152,8 +163,7 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      refreshPromise = refreshPromise || refreshSession();
-      const refreshed = await refreshPromise;
+      const refreshed = await refreshSession();
       const accessToken = refreshed?.accessToken || useAuthStore.getState().accessToken;
 
       if (accessToken) {
@@ -171,8 +181,6 @@ api.interceptors.response.use(
       }
 
       return Promise.reject(refreshError);
-    } finally {
-      refreshPromise = null;
     }
   }
 );
@@ -318,6 +326,10 @@ export const categoryApi = {
     const response = await api.put(`/categories/${id}`, payload);
     return unwrap(response);
   },
+  async remove(id) {
+    const response = await api.delete(`/categories/${id}`);
+    return unwrap(response);
+  },
 };
 
 export const enrollmentApi = {
@@ -362,6 +374,18 @@ export const orderApi = {
     const response = await api.get("/orders", { params: query });
     return unwrap(response);
   },
+  async adminDetails(id) {
+    const response = await api.get(`/orders/${id}`);
+    return unwrap(response);
+  },
+  async adminRefund(id) {
+    const response = await api.post(`/orders/${id}/refund`);
+    return unwrap(response);
+  },
+  async webhookMonitoring(limit = 50) {
+    const response = await api.get("/orders/webhook-monitoring", { params: { limit } });
+    return unwrap(response);
+  },
 };
 
 export const wishlistApi = {
@@ -379,6 +403,45 @@ export const wishlistApi = {
   },
 };
 
+export const notesApi = {
+  async list(query = {}) {
+    const response = await api.get("/notes", { params: query });
+    return unwrap(response);
+  },
+  async getBySlug(slug) {
+    const response = await api.get(`/notes/${slug}`);
+    return unwrap(response);
+  },
+  async purchase(id) {
+    const response = await api.post(`/notes/${id}/purchase`);
+    return unwrap(response);
+  },
+  async download(id) {
+    const response = await api.get(`/notes/${id}/download`);
+    return unwrap(response);
+  },
+  async myPurchases() {
+    const response = await api.get("/notes/purchases/me");
+    return unwrap(response);
+  },
+  async listMine() {
+    const response = await api.get("/notes/instructor/me");
+    return unwrap(response);
+  },
+  async create(payload) {
+    const response = await api.post("/notes", payload);
+    return unwrap(response);
+  },
+  async update(id, payload) {
+    const response = await api.put(`/notes/${id}`, payload);
+    return unwrap(response);
+  },
+  async remove(id) {
+    const response = await api.delete(`/notes/${id}`);
+    return unwrap(response);
+  },
+};
+
 export const couponApi = {
   async list() {
     const response = await api.get("/coupons");
@@ -386,6 +449,14 @@ export const couponApi = {
   },
   async create(payload) {
     const response = await api.post("/coupons", payload);
+    return unwrap(response);
+  },
+  async update(id, payload) {
+    const response = await api.put(`/coupons/${id}`, payload);
+    return unwrap(response);
+  },
+  async remove(id) {
+    const response = await api.delete(`/coupons/${id}`);
     return unwrap(response);
   },
   async validate(code, subtotal = 0) {

@@ -1,5 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, BookOpen, CheckCircle2, Clock3, ShoppingBag } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentUser } from "@/hooks/useUsers";
 import { useEnrollments } from "@/hooks/useEnrollments";
@@ -14,10 +16,29 @@ import { formatDate } from "@/utils/formatDate";
 
 export function Dashboard() {
   const { user } = useAuth();
+  const location = useLocation();
+  const paymentNoticeShownRef = useRef(false);
   const meQuery = useCurrentUser();
   const enrollmentsQuery = useEnrollments();
-  const ordersQuery = useOrders();
+  const paymentParams = new URLSearchParams(location.search);
+  const paymentOrderId = paymentParams.get("payment") === "success" ? paymentParams.get("orderId") || "" : "";
+  const ordersQuery = useOrders({ pollOrderId: paymentOrderId });
   const catalogQuery = useCourses({ limit: 100 });
+
+  const orders = ordersQuery.data || [];
+  const paymentOrder = orders.find((order) => String(order?._id) === String(paymentOrderId));
+
+  useEffect(() => {
+    if (paymentNoticeShownRef.current || !paymentOrder) return;
+
+    if (paymentOrder.status === "paid") {
+      toast.success("Payment confirmed. Your course is ready to learn.");
+      paymentNoticeShownRef.current = true;
+    } else if (["failed", "refunded"].includes(paymentOrder.status)) {
+      toast.error(`Payment status: ${paymentOrder.status}.`);
+      paymentNoticeShownRef.current = true;
+    }
+  }, [paymentOrder]);
 
   if (meQuery.isLoading || enrollmentsQuery.isLoading || ordersQuery.isLoading || catalogQuery.isLoading) {
     return <LoadingSpinner />;
@@ -27,7 +48,6 @@ export function Dashboard() {
   }
 
   const enrollments = enrollmentsQuery.data || [];
-  const orders = ordersQuery.data || [];
   const catalog = catalogQuery.data?.data || catalogQuery.data || [];
   const stats = {
     enrolled: enrollments.length,
@@ -42,6 +62,20 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {paymentOrderId && (!paymentOrder || paymentOrder.status === "pending") ? (
+        <Card className="border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <p className="font-semibold">Payment is being confirmed</p>
+          <p className="mt-1 text-sm opacity-80">
+            Your payment was received by the provider. We are waiting for the secure confirmation before enrolling you.
+          </p>
+        </Card>
+      ) : null}
+      {paymentOrder?.status === "paid" ? (
+        <Card className="border-emerald-200 bg-emerald-50 p-5 text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+          <p className="font-semibold">Payment confirmed</p>
+          <p className="mt-1 text-sm opacity-80">Your course enrollment is now available.</p>
+        </Card>
+      ) : null}
       <Card className="border-slate-200 p-6 dark:border-neutral-800">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Student dashboard</p>
         <h1 className="mt-2 text-3xl font-black text-slate-950 dark:text-white">Welcome back, {meQuery.data?.name || user?.name || "Learner"}.</h1>

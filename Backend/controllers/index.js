@@ -10,6 +10,7 @@ const {
   orderService,
   reviewService,
   wishlistService,
+  noteService,
   categoryService,
   couponService,
   notificationService,
@@ -64,7 +65,7 @@ const userController = {
     send(res, data);
   }),
   updateStatus: asyncHandler(async (req, res) => {
-    const data = await userService.updateStatus(req.params.id, req.body.status);
+    const data = await userService.updateStatus(req.user, req.params.id, req.body.status);
     send(res, data);
   }),
 };
@@ -103,7 +104,7 @@ const courseController = {
     send(res, data);
   }),
   lessonAccess: asyncHandler(async (req, res) => {
-    const data = await courseService.getLessonAccessUrl(req.user, req.params.id, req.params.lessonId);
+    const data = await enrollmentService.getLessonAccessUrl(req.user, req.params.id, req.params.lessonId);
     send(res, data);
   }),
 };
@@ -178,6 +179,18 @@ const orderController = {
     const data = await orderService.listOrders(req.query);
     send(res, data);
   }),
+  adminDetails: asyncHandler(async (req, res) => {
+    const data = await orderService.getAdminOrder(req.params.id);
+    send(res, data);
+  }),
+  adminRefund: asyncHandler(async (req, res) => {
+    const data = await orderService.recordAdminRefund(req.params.id);
+    send(res, data);
+  }),
+  webhookMonitoring: asyncHandler(async (req, res) => {
+    const data = await orderService.listWebhookDeliveries(req.query.limit);
+    send(res, data);
+  }),
 };
 
 const reviewController = {
@@ -210,6 +223,18 @@ const wishlistController = {
   }),
 };
 
+const noteController = {
+  listPublic: asyncHandler(async (req, res) => send(res, await noteService.listPublic(req.query))),
+  listMine: asyncHandler(async (req, res) => send(res, await noteService.listMine(req.user))),
+  getPublicBySlug: asyncHandler(async (req, res) => send(res, await noteService.getPublicBySlug(req.params.slug))),
+  create: asyncHandler(async (req, res) => send(res, await noteService.create(req.user, req.body), 201)),
+  update: asyncHandler(async (req, res) => send(res, await noteService.update(req.user, req.params.id, req.body))),
+  remove: asyncHandler(async (req, res) => send(res, await noteService.remove(req.user, req.params.id))),
+  purchase: asyncHandler(async (req, res) => send(res, await noteService.purchase(req.user, req.params.id), 201)),
+  download: asyncHandler(async (req, res) => send(res, await noteService.download(req.user, req.params.id))),
+  myPurchases: asyncHandler(async (req, res) => send(res, await noteService.myPurchases(req.user.id))),
+};
+
 const categoryController = {
   list: asyncHandler(async (req, res) => {
     const data = await categoryService.list();
@@ -223,6 +248,10 @@ const categoryController = {
     const data = await categoryService.update(req.params.id, req.body);
     send(res, data);
   }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await categoryService.remove(req.params.id);
+    send(res, data);
+  }),
 };
 
 const couponController = {
@@ -232,6 +261,14 @@ const couponController = {
   }),
   list: asyncHandler(async (req, res) => {
     const data = await couponService.list();
+    send(res, data);
+  }),
+  update: asyncHandler(async (req, res) => {
+    const data = await couponService.update(req.params.id, req.body);
+    send(res, data);
+  }),
+  delete: asyncHandler(async (req, res) => {
+    const data = await couponService.remove(req.params.id);
     send(res, data);
   }),
   validate: asyncHandler(async (req, res) => {
@@ -315,6 +352,7 @@ module.exports = {
   orderController,
   reviewController,
   wishlistController,
+  noteController,
   categoryController,
   couponController,
   notificationController,

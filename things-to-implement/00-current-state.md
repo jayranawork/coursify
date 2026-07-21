@@ -35,9 +35,24 @@ This file records what the project already does today and what is still incomple
 - Frontend upload controls for profile avatars and course thumbnails.
 - Presigned S3 uploads for lesson PDFs and videos.
 - Frontend lesson upload controls for videos and PDFs.
+- Limited payment-status polling after Lemon Squeezy redirects, with readable processing and confirmation states.
+- A one-time migration for older refunded orders whose enrollments still have an active or completed status.
+- Node unit tests for webhook reconciliation and central error responses, plus HTTP integration tests for health and 404 handling.
+- Background cleanup now releases expired coupon reservations on a scheduled interval.
+- Notes marketplace foundation now includes PDF note records, instructor/admin publishing APIs, free-note purchases, and protected S3 downloads.
+- Webhook delivery monitoring stores recent delivery status, attempts, response status, and safe error details for admin inspection.
+
+## Verification commands
+
+- `npm test` runs the backend unit and HTTP integration tests.
+- `npm run frontend:build` verifies the production frontend bundle.
+- `npm run db:migrate:refunded-enrollments -- --dry-run` previews the one-time refunded-enrollment cleanup.
+- `npm run db:migrate:refunded-enrollments` applies that cleanup after confirming the database connection.
+
+Database transaction tests must run against MongoDB replica-set support. The current local standalone MongoDB setup cannot execute transactions safely; use a local single-node replica set or MongoDB Atlas before running transaction-specific integration tests.
 
 ## Important risk notes
 
-- Coupon reservations use lazy expiry cleanup; a background cleanup worker is still a future scale improvement.
+- Coupon cleanup runs in-process after the backend connects; a distributed job runner is still a future scale improvement for multiple backend instances.
 - The frontend bundle is larger than ideal because the course editor and public features are loaded together.
 - The current setup is functional for demo and development, but not yet production-hard.

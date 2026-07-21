@@ -6,11 +6,13 @@
     "start": "cd Backend && npm start",
     "dev": "cd Backend && npm run dev",
     "seed": "cd Backend && npm run seed",
+    "db:reset": "cd Backend && npm run db:reset",
     "frontend:dev": "cd Frontend && npm run dev",
     "frontend:build": "cd Frontend && npm run build",
     "frontend:preview": "cd Frontend && npm run preview",
     "install-all": "npm install && cd Backend && npm install",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cd Backend && npm test",
+    "db:migrate:refunded-enrollments": "cd Backend && npm run migrate:refunded-enrollments"
   },
   "keywords": [],
   "author": "",

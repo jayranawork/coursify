@@ -16,6 +16,7 @@ const {
   CourseProgress,
   Coupon,
   Notification,
+  Note,
 } = require("./models");
 
 const DEMO = {
@@ -444,6 +445,33 @@ const demoCourses = [
 
 const demoCoupon = { code: "WELCOME10", type: "percent", value: 10, maxRedemptions: 100, isActive: true };
 
+const demoNotes = [
+  {
+    title: "React Hooks Quick Reference",
+    slug: "react-hooks-quick-reference",
+    description: "A compact guide to useState, useEffect, custom hooks, and the patterns that keep React code predictable.",
+    subject: "Frontend",
+    fileKey: "notes/react-hooks-quick-reference.pdf",
+    fileName: "react-hooks-quick-reference.pdf",
+  },
+  {
+    title: "SQL Reporting Cheat Sheet",
+    slug: "sql-reporting-cheat-sheet",
+    description: "Practical SELECT, JOIN, GROUP BY, and window-function examples for everyday analytics work.",
+    subject: "Data Analytics",
+    fileKey: "notes/sql-reporting-cheat-sheet.pdf",
+    fileName: "sql-reporting-cheat-sheet.pdf",
+  },
+  {
+    title: "API Security Checklist",
+    slug: "api-security-checklist",
+    description: "A production-minded checklist covering authentication, validation, authorization, logging, and webhook safety.",
+    subject: "Backend",
+    fileKey: "notes/api-security-checklist.pdf",
+    fileName: "api-security-checklist.pdf",
+  },
+];
+
 const makeKey = (obj) => Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined));
 
 async function upsertUser(data) {
@@ -563,6 +591,23 @@ async function main() {
         await upsertLesson(course._id, section._id, sectionData.lessons[lessonIndex], lessonIndex + 1);
       }
     }
+  }
+
+  for (const noteData of demoNotes) {
+    await Note.findOneAndUpdate(
+      { slug: noteData.slug },
+      {
+        $set: {
+          ...noteData,
+          sellerId: instructor._id,
+          price: 0,
+          currency: "INR",
+          contentType: "application/pdf",
+          isPublished: true,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
   }
 
   await Coupon.findOneAndUpdate(
@@ -737,6 +782,7 @@ async function main() {
       defaultUser: DEMO.defaultUser.email,
     },
     coupon: demoCoupon.code,
+    notes: demoNotes.map((note) => note.slug),
     courses: Array.from(courses.values()).map((course) => course.slug),
   };
 

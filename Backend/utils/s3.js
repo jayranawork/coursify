@@ -17,6 +17,7 @@ const getS3Env = () => {
 const ALLOWED_CONTENT_TYPES = {
   lessonVideos: new Set(["video/mp4", "video/webm", "video/quicktime", "video/mpeg"]),
   lessonPdfs: new Set(["application/pdf"]),
+  notes: new Set(["application/pdf"]),
 };
 
 const inferFileFolder = (contentType) => {
@@ -46,7 +47,7 @@ const safeFileName = (fileName) =>
     .replace(/^-|-$/g, "");
 
 const buildObjectKey = (folder, fileName) => {
-  const prefix = folder === "lessonPdfs" ? "lesson-pdfs" : "lesson-videos";
+  const prefix = folder === "lessonPdfs" ? "lesson-pdfs" : folder === "notes" ? "notes" : "lesson-videos";
   const stamp = Date.now();
   const random = crypto.randomBytes(6).toString("hex");
   return `${prefix}/${stamp}-${random}-${safeFileName(fileName)}`;

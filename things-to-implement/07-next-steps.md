@@ -24,12 +24,16 @@ If you want the cleanest path forward, do these in order.
 
 ## Step 6
 
-- Reconcile frontend and backend behavior for checkout and auto-enrollment.
+- Run the refunded-enrollment migration once against the production-like database and verify payment polling with a real webhook.
 
 ## Step 7
 
-- Finish the admin CRUD gaps and polish the UI.
+- Add database-backed integration tests for paid enrollment protection, refund access, cross-course progress, coupon rollback, duplicate webhooks, and transaction rollback.
 
 ## Step 8
+
+- Finish the admin CRUD gaps and polish the UI.
+
+## Step 9
 
 - Split large frontend work if the bundle remains too heavy.

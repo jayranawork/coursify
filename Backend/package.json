@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "db:reset": "node scripts/resetDatabase.js",
+    "migrate:refunded-enrollments": "node scripts/migrateRefundedEnrollments.js",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\""
   },
   "engines": {
     "node": ">=14.0.0"

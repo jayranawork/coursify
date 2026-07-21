@@ -11,6 +11,7 @@ const ALLOWED_FOLDERS = {
   courseThumbnails: ["instructor", "admin"],
   lessonVideos: ["instructor", "admin"],
   lessonPdfs: ["instructor", "admin"],
+  notes: ["instructor", "admin"],
 };
 
 const normalizeFolder = (folder) => {

@@ -12,6 +12,7 @@ if (missingEnvVars.length > 0) {
 const config = {
   port: Number(process.env.PORT),
   mongoUrl: process.env.MONGODB_URL,
+  testMongoUrl: process.env.TEST_MONGODB_URL || "",
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET,
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   accessTokenTtl: "15m",
@@ -26,8 +27,11 @@ const config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   lemonSqueezyApiKey: process.env.LEMONSQUEEZY_API_KEY || "",
   lemonSqueezyStoreId: process.env.LEMONSQUEEZY_STORE_ID || "",
+  lemonSqueezyProductId: process.env.LEMONSQUEEZY_PRODUCT_ID || "",
   lemonSqueezyVariantId: process.env.LEMONSQUEEZY_VARIANT_ID || "",
   lemonSqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
+  lemonSqueezyAmountToleranceMinor: Number(process.env.LEMONSQUEEZY_AMOUNT_TOLERANCE_MINOR || 100),
+  couponCleanupIntervalMs: Number(process.env.COUPON_CLEANUP_INTERVAL_MS || 60000),
 };
 
 module.exports = config;

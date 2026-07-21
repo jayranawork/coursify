@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useCategories, useCreateCategory, useUpdateCategory } from "@/hooks/useCategories";
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from "@/hooks/useCategories";
 import { Button, Card, Input, Label, Badge } from "@/components/ui";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -19,6 +19,7 @@ export function CategoryManagement() {
   const categoriesQuery = useCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
+  const deleteCategory = useDeleteCategory();
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: { name: "", slug: "" },
@@ -49,6 +50,16 @@ export function CategoryManagement() {
       await updateCategory.mutateAsync({ id: category._id, payload: { name: category.name, slug: category.slug } });
       toast.success("Category updated");
       categoriesQuery.refetch();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    }
+  };
+
+  const remove = async (category) => {
+    if (!window.confirm(`Deactivate the ${category.name} category?`)) return;
+    try {
+      await deleteCategory.mutateAsync(category._id);
+      toast.success("Category deactivated");
     } catch (error) {
       toast.error(getApiErrorMessage(error));
     }
@@ -88,9 +99,12 @@ export function CategoryManagement() {
                 </div>
                 <Badge variant="secondary">{category.isActive ? "Active" : "Inactive"}</Badge>
               </div>
-              <div className="mt-4">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => update(category)}>
                   Save current values
+                </Button>
+                <Button variant="outline" onClick={() => remove(category)}>
+                  Deactivate
                 </Button>
               </div>
             </Card>

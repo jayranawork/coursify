@@ -34,7 +34,7 @@ router.get(
   validate(lessonAccessSchema, "params"),
   courseController.lessonAccess
 );
-router.post("/:id/reviews", requireAuth, requireRole("student", "instructor", "admin"), validate(reviewSchema), reviewController.create);
+router.post("/:id/reviews", requireAuth, requireRole("student"), validate(reviewSchema), reviewController.create);
 router.get("/:id/reviews", reviewController.list);
 
 router.put("/:id", requireAuth, requireRole("instructor", "admin"), validate(courseUpdateSchema), courseController.update);

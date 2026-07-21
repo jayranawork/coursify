@@ -9,11 +9,13 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { formatDate } from "@/utils/formatDate";
 import { getApiErrorMessage } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 export function UserManagement() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
+  const { user: currentUser } = useAuth();
   const usersQuery = useAdminUsers({ page, limit: 10 });
   const updateStatus = useUpdateUserStatus();
 
@@ -89,7 +91,11 @@ export function UserManagement() {
                   <Button variant="outline" onClick={() => setSelectedUser(user)}>
                     View profile
                   </Button>
-                  <Button variant="outline" onClick={() => toggle(user)}>
+                  <Button
+                    variant="outline"
+                    disabled={String(currentUser?._id || currentUser?.id) === String(user._id) && user.status !== "blocked"}
+                    onClick={() => toggle(user)}
+                  >
                     {user.status === "blocked" ? "Unblock" : "Block"}
                   </Button>
                 </div>

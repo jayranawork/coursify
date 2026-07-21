@@ -163,6 +163,7 @@ const reviewSchema = new Schema(
 );
 
 reviewSchema.index({ courseId: 1, createdAt: -1 });
+reviewSchema.index({ userId: 1, courseId: 1 }, { unique: true });
 
 const wishlistSchema = new Schema(
   {
@@ -285,6 +286,64 @@ const passwordResetTokenSchema = new Schema(
 
 passwordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
+const webhookDeliverySchema = new Schema(
+  {
+    deliveryKey: { type: String, required: true, unique: true, index: true },
+    provider: { type: String, default: "lemon_squeezy", index: true },
+    webhookId: { type: String, default: "" },
+    eventName: { type: String, default: "" },
+    providerOrderId: { type: String, default: "" },
+    localOrderId: { type: String, default: "" },
+    status: { type: String, enum: ["received", "processed", "failed", "ignored"], default: "received", index: true },
+    attempts: { type: Number, default: 0, min: 0 },
+    responseStatus: { type: Number, default: null },
+    lastError: { type: String, default: "" },
+    receivedAt: { type: Date, default: Date.now },
+    processedAt: { type: Date, default: null },
+  },
+  { timestamps: true }
+);
+
+webhookDeliverySchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
+const noteSchema = new Schema(
+  {
+    sellerId: { type: ObjectId, required: true, index: true },
+    title: { type: String, required: true, trim: true, maxlength: 160 },
+    slug: { type: String, required: true, unique: true, index: true },
+    description: { type: String, required: true, trim: true, maxlength: 2000 },
+    subject: { type: String, required: true, trim: true, maxlength: 80, index: true },
+    price: { type: Number, required: true, min: 0, default: 0 },
+    currency: { type: String, required: true, enum: ["INR"], default: "INR" },
+    fileKey: { type: String, required: true, trim: true },
+    fileName: { type: String, required: true, trim: true },
+    contentType: { type: String, enum: ["application/pdf"], default: "application/pdf" },
+    fileSize: { type: Number, min: 0, default: 0 },
+    thumbnailUrl: { type: String, default: "" },
+    isPublished: { type: Boolean, default: false, index: true },
+    purchaseCount: { type: Number, default: 0, min: 0 },
+    downloadCount: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: true }
+);
+
+noteSchema.index({ isPublished: 1, createdAt: -1 });
+noteSchema.index({ subject: 1, isPublished: 1, createdAt: -1 });
+
+const notePurchaseSchema = new Schema(
+  {
+    noteId: { type: ObjectId, ref: "Note", required: true, index: true },
+    userId: { type: ObjectId, required: true, index: true },
+    amount: { type: Number, required: true, min: 0 },
+    currency: { type: String, required: true, enum: ["INR"], default: "INR" },
+    status: { type: String, enum: ["completed", "refunded"], default: "completed", index: true },
+    purchasedAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+);
+
+notePurchaseSchema.index({ userId: 1, noteId: 1 }, { unique: true });
+
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 const Course = mongoose.models.Course || mongoose.model("Course", courseSchema);
@@ -305,6 +364,9 @@ const Notification = mongoose.models.Notification || mongoose.model("Notificatio
 const RefreshToken = mongoose.models.RefreshToken || mongoose.model("RefreshToken", refreshTokenSchema);
 const PasswordResetToken =
   mongoose.models.PasswordResetToken || mongoose.model("PasswordResetToken", passwordResetTokenSchema);
+const WebhookDelivery = mongoose.models.WebhookDelivery || mongoose.model("WebhookDelivery", webhookDeliverySchema);
+const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
+const NotePurchase = mongoose.models.NotePurchase || mongoose.model("NotePurchase", notePurchaseSchema);
 
 module.exports = {
   User,
@@ -324,4 +386,7 @@ module.exports = {
   Notification,
   RefreshToken,
   PasswordResetToken,
+  WebhookDelivery,
+  Note,
+  NotePurchase,
 };
