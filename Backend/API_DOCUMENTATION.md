@@ -85,6 +85,8 @@ Allowed public roles:
 - `student`
 - `instructor`
 
+Request body may contain either `courseIds` or `noteIds`, but not both.
+
 Business logic:
 
 - validates the payload with Zod
@@ -623,7 +625,7 @@ Role:
 
 Business logic:
 
-- validates the course list
+- validates the course or Study Vault note list
 - calculates subtotal using discount price if available
 - validates the coupon if provided
 - applies the computed coupon discount if valid
@@ -643,6 +645,14 @@ Request body:
 {
   "courseIds": ["665f...", "665f..."],
   "couponCode": "WELCOME10"
+}
+```
+
+Paid Study Vault example:
+
+```json
+{
+  "noteIds": ["665f..."]
 }
 ```
 
@@ -673,6 +683,8 @@ Business logic:
 - enrolls the student into all purchased courses
 - is idempotent on repeated webhook deliveries and reconciles missing enrollments
 - commits order status, coupon redemption, and enrollment changes in one MongoDB transaction
+- completes `NotePurchase` records for paid Study Vault orders and preserves the provider order ID
+- revokes course enrollments and note access when an `order_refunded` event is received
 
 Webhook diagnostics are logged server-side without logging the signature or full
 payload. Each webhook log includes `eventName`, `orderId`, `providerStatus`, and
@@ -755,9 +767,9 @@ Creates a note for an instructor or admin. The PDF must already be uploaded thro
 
 ### POST `/api/notes/:id/purchase`
 
-Creates a completed purchase record for a published free note. Paid notes currently
-return `402` until they are connected to a verified Lemon Squeezy checkout and webhook
-reconciliation flow. This prevents users from receiving paid content without payment.
+Creates a completed purchase record for a published free note. Paid notes use
+`POST /api/orders` with `noteIds`, then complete through the signed Lemon Squeezy webhook.
+This endpoint continues to reject paid notes so paid access cannot bypass checkout.
 
 ### GET `/api/notes/:id/download`
 

@@ -416,6 +416,10 @@ export const notesApi = {
     const response = await api.post(`/notes/${id}/purchase`);
     return unwrap(response);
   },
+  async checkout(id) {
+    const response = await api.post("/orders", { noteIds: [id] });
+    return unwrap(response);
+  },
   async download(id) {
     const response = await api.get(`/notes/${id}/download`);
     return unwrap(response);

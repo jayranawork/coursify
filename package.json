@@ -10,6 +10,11 @@
     "frontend:dev": "cd Frontend && npm run dev",
     "frontend:build": "cd Frontend && npm run build",
     "frontend:preview": "cd Frontend && npm run preview",
+    "frontend:test": "cd Frontend && npm run test",
+    "frontend:lint": "cd Frontend && npm run lint",
+    "frontend:e2e": "cd Frontend && npm run e2e",
+    "backend:lint": "cd Backend && npm run lint",
+    "backend:load": "cd Backend && npm run load",
     "install-all": "npm install && cd Backend && npm install",
     "test": "cd Backend && npm test",
     "db:migrate:refunded-enrollments": "cd Backend && npm run migrate:refunded-enrollments"

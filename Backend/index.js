@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const compression = require("compression");
 
 const config = require("./config");
 const { notFound, errorHandler } = require("./middlewares/error");
@@ -8,6 +9,8 @@ const securityHeaders = require("./middlewares/security");
 const requestLogger = require("./middlewares/requestLogger");
 const { log } = require("./utils/logger");
 const { startMaintenanceJobs } = require("./jobs/maintenance");
+const { startQueueWorkers } = require("./jobs/queue");
+const { requestMetrics, metricsHandler } = require("./utils/metrics");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -23,13 +26,21 @@ const noteRoutes = require("./routes/notes");
 
 const app = express();
 
+app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
+
 app.use(
   cors({
-    origin: config.corsOrigins.length ? config.corsOrigins : true,
+    origin: (origin, callback) => {
+      if (!origin || config.corsOrigins.includes(origin)) return callback(null, true);
+      if (!config.corsOrigins.length && process.env.NODE_ENV !== "production") return callback(null, true);
+      return callback(null, false);
+    },
     credentials: true,
   })
 );
 app.use(securityHeaders);
+app.use(compression());
+app.use(requestMetrics);
 app.use(requestLogger);
 app.use(
   express.json({
@@ -46,6 +57,13 @@ app.get("/", (req, res) => {
     message: "Coursify API is running",
   });
 });
+
+app.get("/health/live", (req, res) => res.json({ success: true, status: "ok" }));
+app.get("/health/ready", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  return res.status(ready ? 200 : 503).json({ success: ready, status: ready ? "ready" : "not_ready" });
+});
+app.get("/metrics", metricsHandler);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -65,7 +83,8 @@ app.use(errorHandler);
 const start = async () => {
   try {
     await mongoose.connect(config.mongoUrl);
-    startMaintenanceJobs();
+    const queueStarted = await startQueueWorkers();
+    if (!queueStarted) startMaintenanceJobs();
     app.listen(config.port, () => {
       log("info", "server.started", { port: config.port });
     });

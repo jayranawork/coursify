@@ -21,6 +21,7 @@ const {
   deleteResetTokensByUserId,
 } = require("../utils/passwordResetStore");
 const { createPresignedGetUrl } = require("../utils/s3");
+const { getOrSetJson } = require("../utils/cache");
 const {
   createCheckout: createLemonSqueezyCheckout,
   parseWebhookBody: parseLemonSqueezyWebhookBody,
@@ -483,6 +484,7 @@ const ensureOrderEnrollments = async (order, session) => {
   const orderItems = await orderItemsQuery;
 
   for (const item of orderItems) {
+    if (!item.courseId) continue;
     const enrollmentQuery = Enrollment.findOne({ userId: order.userId, courseId: item.courseId });
     if (session) enrollmentQuery.session(session);
     const existingEnrollment = await enrollmentQuery;
@@ -520,7 +522,7 @@ const revokeOrderEnrollments = async (order, session) => {
   const orderItemsQuery = OrderItem.find({ orderId: order._id }).select("courseId");
   if (session) orderItemsQuery.session(session);
   const orderItems = await orderItemsQuery;
-  const courseIds = orderItems.map((item) => item.courseId);
+  const courseIds = orderItems.map((item) => item.courseId).filter(Boolean);
 
   if (courseIds.length === 0) return;
 
@@ -530,6 +532,52 @@ const revokeOrderEnrollments = async (order, session) => {
       courseId: { $in: courseIds },
       status: { $in: ["active", "completed"] },
     },
+    { $set: { status: "refunded" } },
+    session ? { session } : undefined
+  );
+};
+
+const ensureOrderNotePurchases = async (order, session, providerOrderId = "") => {
+  const itemsQuery = OrderItem.find({ orderId: order._id, noteId: { $ne: null } });
+  if (session) itemsQuery.session(session);
+  const items = await itemsQuery;
+
+  for (const item of items) {
+    const existingQuery = NotePurchase.findOne({ userId: order.userId, noteId: item.noteId });
+    if (session) existingQuery.session(session);
+    const existing = await existingQuery;
+    const wasCompleted = existing?.status === "completed";
+
+    await NotePurchase.findOneAndUpdate(
+      { userId: order.userId, noteId: item.noteId },
+      {
+        $set: {
+          orderId: order._id,
+          providerOrderId: providerOrderId || existing?.providerOrderId || "",
+          amount: item.priceAtPurchase,
+          currency: order.currency,
+          status: "completed",
+          purchasedAt: existing?.purchasedAt || new Date(),
+        },
+      },
+      { new: true, upsert: true, ...(session ? { session } : {}) }
+    );
+
+    if (!wasCompleted) {
+      await Note.updateOne({ _id: item.noteId }, { $inc: { purchaseCount: 1 } }, session ? { session } : undefined);
+    }
+  }
+};
+
+const revokeOrderNotePurchases = async (order, session) => {
+  const itemsQuery = OrderItem.find({ orderId: order._id, noteId: { $ne: null } }).select("noteId");
+  if (session) itemsQuery.session(session);
+  const items = await itemsQuery;
+  const noteIds = items.map((item) => item.noteId).filter(Boolean);
+  if (noteIds.length === 0) return;
+
+  await NotePurchase.updateMany(
+    { userId: order.userId, noteId: { $in: noteIds }, status: "completed" },
     { $set: { status: "refunded" } },
     session ? { session } : undefined
   );
@@ -769,13 +817,22 @@ const userService = {
 
 const courseService = {
   async listPublic(query) {
-    const filter = courseSearchFilter(query);
-    const result = await paginate(Course, filter, {
+    const cacheKey = `catalog:courses:${JSON.stringify({
+      page: query.page || 1,
+      limit: query.limit || 12,
+      categoryId: query.categoryId || "",
+      level: query.level || "",
+      instructorId: query.instructorId || "",
+      isFeatured: query.isFeatured || "",
+      minPrice: query.minPrice || "",
+      maxPrice: query.maxPrice || "",
+      search: query.search || "",
+    })}`;
+    return getOrSetJson(cacheKey, async () => paginate(Course, courseSearchFilter(query), {
       page: query.page,
       limit: query.limit,
       sort: { createdAt: -1 },
-    });
-    return result;
+    }));
   },
 
   async getPublicBySlug(slug) {
@@ -1221,17 +1278,26 @@ const orderService = {
     if (actor.role !== "student") throw new ApiError(403, "Only students can place orders");
 
     const courseIds = Array.from(new Set(payload.courseIds || []));
-    if (courseIds.length === 0) throw new ApiError(400, "At least one course is required");
+    const noteIds = Array.from(new Set(payload.noteIds || []));
+    if (courseIds.length === 0 && noteIds.length === 0) throw new ApiError(400, "At least one resource is required");
+    if (courseIds.length > 0 && noteIds.length > 0) throw new ApiError(400, "Courses and notes must be purchased separately");
 
-    const courses = await Course.find({ _id: { $in: courseIds } });
-    if (courses.length !== courseIds.length) throw new ApiError(404, "One or more courses were not found");
+    const resourceType = noteIds.length > 0 ? "note" : "course";
+    const courses = resourceType === "course" ? await Course.find({ _id: { $in: courseIds }, isPublished: true }) : [];
+    const notes = resourceType === "note" ? await Note.find({ _id: { $in: noteIds }, isPublished: true }) : [];
+    const requestedCount = resourceType === "note" ? noteIds.length : courseIds.length;
+    const resources = resourceType === "note" ? notes : courses;
+    if (resources.length !== requestedCount) throw new ApiError(404, "One or more resources were not found");
+    if (resourceType === "note" && resources.some((note) => Number(note.price || 0) <= 0)) {
+      throw new ApiError(400, "Free notes should be added to the vault instead of checked out");
+    }
 
     let subtotal = 0;
-    courses.forEach((course) => {
-      subtotal += resolveCoursePrice(course);
+    resources.forEach((resource) => {
+      subtotal += resourceType === "note" ? Number(resource.price || 0) : resolveCoursePrice(resource);
     });
 
-    const order = await runDatabaseTransaction(async (session) => {
+    const { order, amount, couponCode } = await runDatabaseTransaction(async (session) => {
       let discount = 0;
       let couponCode = "";
       let couponReservationExpiresAt = null;
@@ -1255,6 +1321,7 @@ const orderService = {
           amount,
           currency: payload.currency || "INR",
           status: "pending",
+          resourceType,
           paymentProvider: "lemon_squeezy",
           paymentIntentId: "",
           couponCode,
@@ -1265,10 +1332,11 @@ const orderService = {
       );
 
       await OrderItem.insertMany(
-        courses.map((course) => ({
+        resources.map((resource) => ({
           orderId: createdOrder._id,
-          courseId: course._id,
-          priceAtPurchase: resolveCoursePrice(course),
+          ...(resourceType === "note" ? { noteId: resource._id } : { courseId: resource._id }),
+          resourceType,
+          priceAtPurchase: resourceType === "note" ? Number(resource.price || 0) : resolveCoursePrice(resource),
         })),
         { session }
       );
@@ -1289,6 +1357,9 @@ const orderService = {
         userId: actor.id,
         userEmail: actor.email,
         courseIds,
+        noteIds,
+        resourceType,
+        redirectPath: resourceType === "note" ? "/student/vault" : "/student/dashboard",
         couponCode,
       });
     } catch (error) {
@@ -1361,6 +1432,7 @@ const orderService = {
 
       await releaseOrderCouponReservation(order, session);
       await revokeOrderEnrollments(order, session);
+      await revokeOrderNotePurchases(order, session);
       order.status = "refunded";
       await order.save({ session });
       return order;
@@ -1398,6 +1470,7 @@ const orderService = {
 
         await releaseOrderCouponReservation(currentOrder, session);
         await revokeOrderEnrollments(currentOrder, session);
+        await revokeOrderNotePurchases(currentOrder, session);
         currentOrder.status = "refunded";
         await currentOrder.save({ session });
 
@@ -1424,6 +1497,7 @@ const orderService = {
 
       if (currentOrder.status === "paid") {
         await ensureOrderEnrollments(currentOrder, session);
+        await ensureOrderNotePurchases(currentOrder, session, currentOrder.paymentIntentId);
         return {
           ok: true,
           alreadyProcessed: true,
@@ -1443,6 +1517,7 @@ const orderService = {
       await currentOrder.save({ session });
 
       await ensureOrderEnrollments(currentOrder, session);
+      await ensureOrderNotePurchases(currentOrder, session, providerOrderId);
 
       return {
         ok: true,
@@ -1543,20 +1618,26 @@ const canDownloadNote = async (actor, note) => {
 
 const noteService = {
   async listPublic(query = {}) {
-    const filter = { isPublished: true };
-    if (query.subject) filter.subject = String(query.subject).trim();
-    if (query.search) {
-      const search = String(query.search).trim();
-      if (search) filter.$or = [{ title: new RegExp(search, "i") }, { description: new RegExp(search, "i") }];
-    }
+    const cacheKey = `catalog:notes:${JSON.stringify({
+      subject: query.subject || "",
+      search: query.search || "",
+      limit: Math.min(Math.max(Number(query.limit) || 24, 1), 100),
+    })}`;
+    return getOrSetJson(cacheKey, async () => {
+      const filter = { isPublished: true };
+      if (query.subject) filter.subject = String(query.subject).trim();
+      if (query.search) {
+        const search = String(query.search).trim();
+        if (search) filter.$or = [{ title: new RegExp(search, "i") }, { description: new RegExp(search, "i") }];
+      }
 
-    const notes = await Note.find(filter)
-      .select("title slug description subject price currency fileName thumbnailUrl purchaseCount sellerId createdAt")
-      .populate("sellerId", "name avatar role")
-      .sort({ createdAt: -1 })
-      .limit(Math.min(Math.max(Number(query.limit) || 24, 1), 100))
-      .lean();
-    return notes;
+      return Note.find(filter)
+        .select("title slug description subject price currency fileName thumbnailUrl purchaseCount sellerId createdAt")
+        .populate("sellerId", "name avatar role")
+        .sort({ createdAt: -1 })
+        .limit(Math.min(Math.max(Number(query.limit) || 24, 1), 100))
+        .lean();
+    });
   },
 
   async listMine(actor) {

@@ -129,6 +129,7 @@ const orderSchema = new Schema(
       default: "pending",
       index: true,
     },
+    resourceType: { type: String, enum: ["course", "note"], default: "course", index: true },
     paymentProvider: { type: String, default: "manual" },
     paymentIntentId: { type: String, default: "" },
     couponCode: { type: String, default: "" },
@@ -144,11 +145,22 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 const orderItemSchema = new Schema(
   {
     orderId: { type: ObjectId, required: true, index: true },
-    courseId: { type: ObjectId, required: true, index: true },
+    courseId: { type: ObjectId, ref: "Course", default: null, index: true },
+    noteId: { type: ObjectId, ref: "Note", default: null, index: true },
+    resourceType: { type: String, enum: ["course", "note"], required: true, default: "course" },
     priceAtPurchase: { type: Number, required: true, min: 0 },
   },
   { timestamps: true }
 );
+
+orderItemSchema.pre("validate", function validateResource(next) {
+  const hasCourse = Boolean(this.courseId);
+  const hasNote = Boolean(this.noteId);
+  if (hasCourse === hasNote) return next(new Error("An order item must reference exactly one resource"));
+  if (this.resourceType === "course" && !hasCourse) return next(new Error("Course order item is missing courseId"));
+  if (this.resourceType === "note" && !hasNote) return next(new Error("Note order item is missing noteId"));
+  next();
+});
 
 const reviewSchema = new Schema(
   {
@@ -334,9 +346,11 @@ const notePurchaseSchema = new Schema(
   {
     noteId: { type: ObjectId, ref: "Note", required: true, index: true },
     userId: { type: ObjectId, required: true, index: true },
+    orderId: { type: ObjectId, ref: "Order", default: null, index: true },
+    providerOrderId: { type: String, default: "" },
     amount: { type: Number, required: true, min: 0 },
     currency: { type: String, required: true, enum: ["INR"], default: "INR" },
-    status: { type: String, enum: ["completed", "refunded"], default: "completed", index: true },
+    status: { type: String, enum: ["pending", "completed", "refunded"], default: "completed", index: true },
     purchasedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

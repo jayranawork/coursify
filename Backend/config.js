@@ -32,6 +32,11 @@ const config = {
   lemonSqueezyWebhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET || "",
   lemonSqueezyAmountToleranceMinor: Number(process.env.LEMONSQUEEZY_AMOUNT_TOLERANCE_MINOR || 100),
   couponCleanupIntervalMs: Number(process.env.COUPON_CLEANUP_INTERVAL_MS || 60000),
+  redisUrl: process.env.REDIS_URL || "",
+  cacheTtlSeconds: Number(process.env.CACHE_TTL_SECONDS || 30),
+  metricsEnabled: process.env.METRICS_ENABLED !== "false",
+  metricsToken: process.env.METRICS_TOKEN || "",
+  queueEnabled: process.env.QUEUE_ENABLED === "true",
 };
 
 module.exports = config;

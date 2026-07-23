@@ -24,6 +24,14 @@ test("health endpoint returns the API status", async () => {
   assert.equal(body.success, true);
 });
 
+test("liveness and metrics endpoints are available for deployment checks", async () => {
+  const liveResponse = await fetch(`${baseUrl}/health/live`);
+  const metricsResponse = await fetch(`${baseUrl}/metrics`);
+  assert.equal(liveResponse.status, 200);
+  assert.equal(metricsResponse.status, 200);
+  assert.match(await metricsResponse.text(), /coursify_http_requests_total/);
+});
+
 test("unknown endpoints use the central 404 response", async () => {
   const response = await fetch(`${baseUrl}/api/test-endpoint-that-does-not-exist`);
   const body = await response.json();

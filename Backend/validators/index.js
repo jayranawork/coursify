@@ -100,11 +100,15 @@ const progressSchema = z.object({
 });
 
 const orderSchema = z.object({
-  courseIds: z.array(objectId).min(1),
+  courseIds: z.array(objectId).min(1).optional(),
+  noteIds: z.array(objectId).min(1).optional(),
   currency: z.string().min(3).max(10).optional(),
   paymentProvider: z.string().max(50).optional(),
   paymentIntentId: z.string().max(120).optional(),
   couponCode: z.string().max(40).optional(),
+}).refine((payload) => Boolean(payload.courseIds?.length) !== Boolean(payload.noteIds?.length), {
+  message: "Provide either courseIds or noteIds",
+  path: ["courseIds"],
 });
 
 const reviewSchema = z.object({

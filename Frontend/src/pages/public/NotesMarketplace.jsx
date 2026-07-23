@@ -34,9 +34,18 @@ export function NotesMarketplace() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: (id) => notesApi.purchase(id),
-    onSuccess: () => {
-      toast.success("Note added to your Study Vault");
+    mutationFn: ({ id, paid }) => (paid ? notesApi.checkout(id) : notesApi.purchase(id)),
+    onSuccess: (data, variables) => {
+      if (variables.paid) {
+        if (!data?.checkoutUrl) {
+          toast.error("Payment checkout could not be created.");
+          return;
+        }
+        toast.success("Redirecting to secure checkout...");
+        window.location.assign(data.checkoutUrl);
+      } else {
+        toast.success("Note added to your Study Vault");
+      }
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       queryClient.invalidateQueries({ queryKey: ["note-purchases"] });
     },
@@ -56,7 +65,11 @@ export function NotesMarketplace() {
       navigate("/login", { state: { from: "/notes" } });
       return;
     }
-    purchaseMutation.mutate(note._id);
+    if (Number(note.price || 0) > 0) {
+      purchaseMutation.mutate({ id: note._id, paid: true });
+      return;
+    }
+    purchaseMutation.mutate({ id: note._id, paid: false });
   };
 
   const handleCreatorAction = () => {

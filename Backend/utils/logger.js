@@ -1,4 +1,25 @@
 const crypto = require("crypto");
+const pino = require("pino");
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  timestamp: pino.stdTimeFunctions.isoTime,
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
+  transport:
+    process.env.NODE_ENV !== "production"
+      ? {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            translateTime: "SYS:standard",
+            singleLine: true,
+            messageFormat: "{event} {method} {url} {statusCode} {durationMs}ms",
+          },
+        }
+      : undefined,
+});
 
 const SENSITIVE_KEYS = new Set([
   "password",
@@ -61,15 +82,9 @@ const sanitize = (value, key = "", depth = 0) => {
 };
 
 const log = (level, event, details = {}) => {
-  const record = {
-    timestamp: new Date().toISOString(),
-    level,
-    event,
-    ...sanitize(details),
-  };
-
-  const writer = level === "error" ? console.error : level === "warn" ? console.warn : console.info;
-  writer(`[${event}]`, JSON.stringify(record));
+  const safeDetails = sanitize(details);
+  const write = typeof logger[level] === "function" ? logger[level].bind(logger) : logger.info.bind(logger);
+  write({ event, ...safeDetails }, event);
 };
 
 module.exports = { createRequestId, sanitize, log };

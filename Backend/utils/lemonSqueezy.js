@@ -27,13 +27,24 @@ const normalizeMoneyAmount = (amount) => {
   return Math.round(numeric);
 };
 
-const createCheckout = async ({ amount, currency, orderId, userId, userEmail, courseIds = [], couponCode = "" }) => {
+const createCheckout = async ({
+  amount,
+  currency,
+  orderId,
+  userId,
+  userEmail,
+  courseIds = [],
+  noteIds = [],
+  resourceType = "course",
+  couponCode = "",
+  redirectPath = "/student/dashboard",
+}) => {
   const { apiKey, storeId, variantId, frontendUrl } = getLemonSqueezyConfig();
   const customPrice = normalizeMoneyAmount(amount);
 
   const productOptions = {};
   if (frontendUrl) {
-    productOptions.redirect_url = `${frontendUrl.replace(/\/$/, "")}/student/dashboard?payment=success&orderId=${orderId}`;
+    productOptions.redirect_url = `${frontendUrl.replace(/\/$/, "")}${redirectPath}?payment=success&orderId=${orderId}`;
   }
 
   const body = {
@@ -46,7 +57,9 @@ const createCheckout = async ({ amount, currency, orderId, userId, userEmail, co
           custom: {
             order_id: String(orderId),
             user_id: String(userId),
+            resource_type: resourceType,
             course_ids: JSON.stringify(courseIds),
+            note_ids: JSON.stringify(noteIds),
             currency: currency || "INR",
             ...(couponCode ? { coupon_code: String(couponCode) } : {}),
           },
