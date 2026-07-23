@@ -112,15 +112,6 @@ const ensureRoleAllowed = (role) => {
 const isOwnerOrAdmin = (actor, ownerId) =>
   actor?.role === "admin" || String(actor?.id) === String(ownerId);
 
-const getCourseByIdentifier = async (identifier, bySlug = false) => {
-  const query = bySlug ? { slug: identifier } : { _id: identifier };
-  const course = await Course.findOne(query);
-  if (!course) {
-    throw new ApiError(404, "Course not found");
-  }
-  return course;
-};
-
 const upsertNotification = async ({ userId, type, title, message }) => {
   return Notification.create({ userId, type, title, message });
 };

@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const ApiError = require("../utils/apiError");
 const paginate = require("../utils/paginate");
 const { ImportedPlaylist, ImportedPlaylistVideo } = require("../models");

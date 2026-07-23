@@ -19,7 +19,6 @@ const {
 const { enrollmentService, orderService, canDownloadNote } = require("../../services");
 
 const hasTestDatabase = Boolean(config.testMongoUrl);
-const describeDatabase = hasTestDatabase ? test : test;
 
 test.before(async () => {
   if (!hasTestDatabase) return;

@@ -1,5 +1,4 @@
 const asyncHandler = require("../utils/asyncHandler");
-const ApiError = require("../utils/apiError");
 const {
   authService,
   userService,
