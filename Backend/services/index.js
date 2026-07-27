@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const config = require("../config");
 const ApiError = require("../utils/apiError");
 const { log } = require("../utils/logger");
+const { recordAudit } = require("../utils/audit");
 const slugify = require("../utils/slugify");
 const paginate = require("../utils/paginate");
 const {
@@ -44,6 +45,7 @@ const {
   WebhookDelivery,
   Note,
   NotePurchase,
+  AuditLog,
 } = require("../models");
 
 const runDatabaseTransaction = async (callback) => {
@@ -784,7 +786,7 @@ const userService = {
     return sanitizeUser(user);
   },
 
-  async updateStatus(actor, id, status) {
+  async updateStatus(actor, id, status, request) {
     if (String(actor.id) === String(id) && status === "blocked") {
       throw new ApiError(400, "You cannot block your own admin account");
     }
@@ -799,9 +801,20 @@ const userService = {
       }
     }
 
+    const previousStatus = userToUpdate.status;
     const user = await User.findByIdAndUpdate(id, { status }, { new: true });
     if (!user) throw new ApiError(404, "User not found");
     if (status === "blocked") await deleteTokensByUserId(id);
+    if (previousStatus !== status) {
+      await recordAudit({
+        actor,
+        action: "user.status_changed",
+        resourceType: "user",
+        resourceId: id,
+        metadata: { from: previousStatus, to: status },
+        request,
+      });
+    }
     return sanitizeUser(user);
   },
 };
@@ -1412,8 +1425,8 @@ const orderService = {
     };
   },
 
-  async recordAdminRefund(id) {
-    return runDatabaseTransaction(async (session) => {
+  async recordAdminRefund(actor, id, request) {
+    const refundedOrder = await runDatabaseTransaction(async (session) => {
       const order = await Order.findById(id).session(session);
       if (!order) throw new ApiError(404, "Order not found");
       if (order.status === "refunded") return order;
@@ -1428,6 +1441,15 @@ const orderService = {
       await order.save({ session });
       return order;
     });
+    await recordAudit({
+      actor,
+      action: "order.refunded",
+      resourceType: "order",
+      resourceId: refundedOrder._id,
+      metadata: { amount: refundedOrder.amount, currency: refundedOrder.currency, userId: String(refundedOrder.userId) },
+      request,
+    });
+    return refundedOrder;
   },
 
   async listWebhookDeliveries(limit = 50) {
@@ -1869,6 +1891,19 @@ const platformService = {
   },
 };
 
+const auditService = {
+  async list(query = {}) {
+    const filter = {};
+    if (query.action) filter.action = String(query.action).trim();
+    if (query.resourceType) filter.resourceType = String(query.resourceType).trim();
+    return paginate(AuditLog, filter, {
+      page: query.page,
+      limit: query.limit,
+      sort: { createdAt: -1 },
+    });
+  },
+};
+
 module.exports = {
   sanitizeUser,
   buildTokens,
@@ -1886,6 +1921,7 @@ module.exports = {
   couponService,
   notificationService,
   platformService,
+  auditService,
   upsertNotification,
   recalcCourseRatings,
   resolveCoursePrice,

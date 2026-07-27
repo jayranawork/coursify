@@ -14,8 +14,10 @@ const {
   couponService,
   notificationService,
   platformService,
+  auditService,
 } = require("../services");
 const uploadService = require("../services/upload");
+const { recordAudit } = require("../utils/audit");
 
 const send = (res, data, status = 200) => res.status(status).json({ success: true, data });
 
@@ -64,7 +66,7 @@ const userController = {
     send(res, data);
   }),
   updateStatus: asyncHandler(async (req, res) => {
-    const data = await userService.updateStatus(req.user, req.params.id, req.body.status);
+    const data = await userService.updateStatus(req.user, req.params.id, req.body.status, req);
     send(res, data);
   }),
 };
@@ -88,10 +90,12 @@ const courseController = {
   }),
   delete: asyncHandler(async (req, res) => {
     const data = await courseService.delete(req.user, req.params.id);
+    await recordAudit({ actor: req.user, action: "course.deleted", resourceType: "course", resourceId: req.params.id, request: req });
     send(res, data);
   }),
   publish: asyncHandler(async (req, res) => {
     const data = await courseService.publish(req.user, req.params.id, req.body.isPublished);
+    await recordAudit({ actor: req.user, action: "course.publish_changed", resourceType: "course", resourceId: req.params.id, metadata: { isPublished: req.body.isPublished }, request: req });
     send(res, data);
   }),
   adminList: asyncHandler(async (req, res) => {
@@ -183,7 +187,7 @@ const orderController = {
     send(res, data);
   }),
   adminRefund: asyncHandler(async (req, res) => {
-    const data = await orderService.recordAdminRefund(req.params.id);
+    const data = await orderService.recordAdminRefund(req.user, req.params.id, req);
     send(res, data);
   }),
   webhookMonitoring: asyncHandler(async (req, res) => {
@@ -241,14 +245,17 @@ const categoryController = {
   }),
   create: asyncHandler(async (req, res) => {
     const data = await categoryService.create(req.body);
+    await recordAudit({ actor: req.user, action: "category.created", resourceType: "category", resourceId: data?._id, metadata: { name: data?.name }, request: req });
     send(res, data, 201);
   }),
   update: asyncHandler(async (req, res) => {
     const data = await categoryService.update(req.params.id, req.body);
+    await recordAudit({ actor: req.user, action: "category.updated", resourceType: "category", resourceId: req.params.id, metadata: { fields: Object.keys(req.body || {}) }, request: req });
     send(res, data);
   }),
   delete: asyncHandler(async (req, res) => {
     const data = await categoryService.remove(req.params.id);
+    await recordAudit({ actor: req.user, action: "category.deactivated", resourceType: "category", resourceId: req.params.id, request: req });
     send(res, data);
   }),
 };
@@ -256,6 +263,7 @@ const categoryController = {
 const couponController = {
   create: asyncHandler(async (req, res) => {
     const data = await couponService.create(req.body);
+    await recordAudit({ actor: req.user, action: "coupon.created", resourceType: "coupon", resourceId: data?._id, metadata: { code: data?.code }, request: req });
     send(res, data, 201);
   }),
   list: asyncHandler(async (req, res) => {
@@ -264,10 +272,12 @@ const couponController = {
   }),
   update: asyncHandler(async (req, res) => {
     const data = await couponService.update(req.params.id, req.body);
+    await recordAudit({ actor: req.user, action: "coupon.updated", resourceType: "coupon", resourceId: req.params.id, metadata: { fields: Object.keys(req.body || {}) }, request: req });
     send(res, data);
   }),
   delete: asyncHandler(async (req, res) => {
     const data = await couponService.remove(req.params.id);
+    await recordAudit({ actor: req.user, action: "coupon.deactivated", resourceType: "coupon", resourceId: req.params.id, request: req });
     send(res, data);
   }),
   validate: asyncHandler(async (req, res) => {
@@ -293,7 +303,7 @@ const notificationController = {
 
 const uploadController = {
   image: asyncHandler(async (req, res) => {
-    const data = await uploadService.uploadImage(req.user, req.body);
+    const data = await uploadService.uploadImage(req.user, req.body, req);
     send(res, data, 201);
   }),
   publicImage: asyncHandler(async (req, res) => {
@@ -301,7 +311,7 @@ const uploadController = {
     send(res, data, 201);
   }),
   lessonFile: asyncHandler(async (req, res) => {
-    const data = await uploadService.requestLessonFileUpload(req.user, req.body);
+    const data = await uploadService.requestLessonFileUpload(req.user, req.body, req);
     send(res, data, 201);
   }),
 };
@@ -339,6 +349,13 @@ const platformController = {
   }),
 };
 
+const auditController = {
+  list: asyncHandler(async (req, res) => {
+    const data = await auditService.list(req.query);
+    send(res, data);
+  }),
+};
+
 const playlistController = require("./playlists");
 
 module.exports = {
@@ -359,5 +376,6 @@ module.exports = {
   instructorController,
   adminController,
   platformController,
+  auditController,
   playlistController,
 };

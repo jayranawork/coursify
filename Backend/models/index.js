@@ -358,6 +358,24 @@ const notePurchaseSchema = new Schema(
 
 notePurchaseSchema.index({ userId: 1, noteId: 1 }, { unique: true });
 
+const auditLogSchema = new Schema(
+  {
+    actorId: { type: ObjectId, default: null, index: true },
+    actorRole: { type: String, default: "system", index: true },
+    action: { type: String, required: true, trim: true, index: true },
+    resourceType: { type: String, required: true, trim: true, index: true },
+    resourceId: { type: String, default: "", index: true },
+    metadata: { type: Schema.Types.Mixed, default: {} },
+    requestId: { type: String, default: "", index: true },
+    ip: { type: String, default: "" },
+    userAgent: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
+
+auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ resourceType: 1, resourceId: 1, createdAt: -1 });
+
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 const Category = mongoose.models.Category || mongoose.model("Category", categorySchema);
 const Course = mongoose.models.Course || mongoose.model("Course", courseSchema);
@@ -381,6 +399,7 @@ const PasswordResetToken =
 const WebhookDelivery = mongoose.models.WebhookDelivery || mongoose.model("WebhookDelivery", webhookDeliverySchema);
 const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 const NotePurchase = mongoose.models.NotePurchase || mongoose.model("NotePurchase", notePurchaseSchema);
+const AuditLog = mongoose.models.AuditLog || mongoose.model("AuditLog", auditLogSchema);
 
 module.exports = {
   User,
@@ -403,4 +422,5 @@ module.exports = {
   WebhookDelivery,
   Note,
   NotePurchase,
+  AuditLog,
 };

@@ -23,6 +23,7 @@ const uploadRoutes = require("./routes/uploads");
 const platformRoutes = require("./routes/platform");
 const playlistRoutes = require("./routes/playlists");
 const noteRoutes = require("./routes/notes");
+const auditRoutes = require("./routes/audit");
 
 const app = express();
 
@@ -54,7 +55,7 @@ app.use(
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Coursify API is running",
+    message: "Skillnest API is running",
   });
 });
 
@@ -76,6 +77,7 @@ app.use("/api/uploads", uploadRoutes);
 app.use("/api/platform", platformRoutes);
 app.use("/api/playlists", playlistRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/admin/audit-logs", auditRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

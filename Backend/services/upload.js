@@ -1,4 +1,5 @@
 const ApiError = require("../utils/apiError");
+const { recordAudit } = require("../utils/audit");
 const { uploadImage: cloudinaryUploadImage } = require("../utils/cloudinary");
 const {
   buildObjectKey,
@@ -31,7 +32,7 @@ const assertFolderPermission = (actor, folder) => {
 };
 
 const uploadService = {
-  async uploadImage(actor, payload) {
+  async uploadImage(actor, payload, request) {
     const folder = normalizeFolder(payload.folder);
     assertFolderPermission(actor, folder);
 
@@ -39,6 +40,15 @@ const uploadService = {
       dataUrl: payload.dataUrl,
       folder,
       publicId: payload.publicId || undefined,
+    });
+
+    await recordAudit({
+      actor,
+      action: "upload.image_completed",
+      resourceType: "upload",
+      resourceId: result.publicId || result.url,
+      metadata: { folder, provider: "cloudinary" },
+      request,
     });
 
     return {
@@ -60,7 +70,7 @@ const uploadService = {
     };
   },
 
-  async requestLessonFileUpload(actor, payload) {
+  async requestLessonFileUpload(actor, payload, request) {
     const folder = validateFileUpload({
       folder: payload.folder,
       contentType: payload.contentType,
@@ -69,6 +79,15 @@ const uploadService = {
 
     const key = buildObjectKey(folder, payload.fileName);
     const presigned = createPresignedPutUrl({ key });
+
+    await recordAudit({
+      actor,
+      action: "upload.file_presigned",
+      resourceType: "upload",
+      resourceId: key,
+      metadata: { folder, contentType: payload.contentType, fileName: payload.fileName },
+      request,
+    });
 
     return {
       provider: "s3",

@@ -527,6 +527,10 @@ export const playlistApi = {
     const response = await api.get(`/playlists/${id}`);
     return unwrap(response);
   },
+  async remove(id) {
+    const response = await api.delete(`/playlists/${id}`);
+    return unwrap(response);
+  },
   async watch(id) {
     const response = await api.get(`/playlists/${id}/watch`);
     return unwrap(response);
