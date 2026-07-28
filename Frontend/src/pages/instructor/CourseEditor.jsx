@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,7 +12,7 @@ import { Button, Card, Input, Label, Select, Textarea, Badge } from "@/component
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
-import { Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleAlert, Plus, Trash2 } from "lucide-react";
 import { uploadApi } from "@/services/api";
 import { fileToDataUrl } from "@/utils/fileToDataUrl";
 
@@ -54,6 +55,7 @@ const schema = z.object({
 export function CourseEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEdit = Boolean(id);
   const coursesQuery = useInstructorCourses({ limit: 100 });
   const categoriesQuery = useCategories();
@@ -108,7 +110,7 @@ export function CourseEditor() {
     }
 
     if (courseMatch) {
-      loadCourse(courseMatch.slug, editorForm);
+      loadCourse(courseMatch._id, editorForm);
     }
   }, [isEdit, courseMatch, editorForm]);
 
@@ -199,6 +201,8 @@ export function CourseEditor() {
         }
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
       toast.success(isEdit ? "Course updated" : "Course created");
       navigate("/instructor/courses");
     } catch (error) {
@@ -398,10 +402,18 @@ function SectionEditor({ sectionIndex, control, register, setValue, removeSectio
 function LessonEditor({ sectionName, lessonIndex, control, register, setValue, removeLesson }) {
   const name = `${sectionName}.lessons.${lessonIndex}`;
   const lessonType = useWatch({ control, name: `${name}.type` });
+  const videoUrl = useWatch({ control, name: `${name}.videoUrl` });
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [showVideoTest, setShowVideoTest] = useState(false);
+  const [videoTestState, setVideoTestState] = useState("idle");
   const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   const uploadLessonFile = async (file, folder) => {
+    if (folder === "lessonVideos") {
+      const upload = await uploadApi.uploadLocalVideoResumable(file, ({ percent }) => setVideoUploadProgress(percent));
+      return upload.fileUrl;
+    }
     const request = await uploadApi.requestLessonFileUpload({
       fileName: file.name,
       contentType: file.type,
@@ -422,6 +434,7 @@ function LessonEditor({ sectionName, lessonIndex, control, register, setValue, r
     }
 
     setIsUploadingVideo(true);
+    setVideoUploadProgress(0);
     try {
       const fileUrl = await uploadLessonFile(file, "lessonVideos");
       setValue(`${name}.videoUrl`, fileUrl, { shouldDirty: true, shouldValidate: true });
@@ -430,6 +443,7 @@ function LessonEditor({ sectionName, lessonIndex, control, register, setValue, r
       toast.error(getApiErrorMessage(error));
     } finally {
       setIsUploadingVideo(false);
+      setVideoUploadProgress(0);
       event.target.value = "";
     }
   };
@@ -487,7 +501,23 @@ function LessonEditor({ sectionName, lessonIndex, control, register, setValue, r
         ) : null}
         {lessonType === "video" ? (
           <Field label="Upload video">
-            <Input type="file" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+            <Input id={`${name}-video-upload`} name={`${name}-video-upload`} type="file" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+            {isUploadingVideo ? <p className="text-xs text-slate-500">Uploading locally… {videoUploadProgress}% · Reselect the same file to resume.</p> : null}
+            {lessonType === "video" && videoUrl ? (
+              <div className="space-y-2 md:col-span-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => { setShowVideoTest((visible) => !visible); setVideoTestState("idle"); }}>
+                  {showVideoTest ? "Hide video test" : "Test video"}
+                </Button>
+                {showVideoTest ? (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+                    <video controls preload="metadata" className="aspect-video w-full" src={videoUrl} onCanPlay={() => setVideoTestState("ready")} onError={() => setVideoTestState("error")} />
+                    <div className="flex items-center gap-2 px-3 py-2 text-xs text-white">
+                      {videoTestState === "ready" ? <><CheckCircle2 className="h-4 w-4 text-emerald-400" />Playback check passed.</> : videoTestState === "error" ? <><CircleAlert className="h-4 w-4 text-red-400" />Playback check failed.</> : "Press play to verify this lesson video."}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </Field>
         ) : null}
         {lessonType === "pdf" ? (
@@ -537,15 +567,15 @@ function Field({ label, name, register, children }) {
   );
 }
 
-async function loadCourse(slug, form) {
-  const course = await courseApi.getBySlug(slug);
+async function loadCourse(courseId, form) {
+  const course = await courseApi.instructorDetails(courseId);
   const tagsText = (course.course.tags || []).join(", ");
   const sections = (course.sections || []).map((section, index) => ({
     _id: section._id,
     title: section.title,
     order: section.order || index + 1,
       lessons: (course.lessons || [])
-      .filter((lesson) => lesson.sectionId === section._id)
+      .filter((lesson) => String(lesson.sectionId) === String(section._id))
       .map((lesson, lessonIndex) => ({
         _id: lesson._id,
         title: lesson.title,
@@ -569,7 +599,7 @@ async function loadCourse(slug, form) {
     discountPrice: course.course.discountPrice || 0,
     level: course.course.level || "beginner",
     language: course.course.language || "en",
-    categoryId: course.course.categoryId || "",
+    categoryId: course.course.categoryId ? String(course.course.categoryId) : "",
     tagsText,
     isPublished: Boolean(course.course.isPublished),
     isFeatured: Boolean(course.course.isFeatured),

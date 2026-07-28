@@ -96,7 +96,7 @@ export function FocusPlaylists() {
   };
 
   return (
-    <div className="focus-room-page focus-room-home min-h-screen overflow-hidden py-6 sm:py-10">
+    <div className="focus-room-page focus-room-home min-h-screen overflow-hidden pb-6 sm:pb-10">
       <section
         id="focus-room-import"
         className="focus-room-hero relative isolate min-h-[min(720px,calc(100vh-7rem))] overflow-hidden"
@@ -125,8 +125,8 @@ export function FocusPlaylists() {
           className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,transparent_0%,rgba(10,10,10,0.12)_42%,rgba(10,10,10,0.78)_100%),linear-gradient(to_bottom,rgba(10,10,10,0.25),rgba(10,10,10,0.62))]"
         />
 
-        <div className="relative z-10 flex min-h-[min(720px,calc(100vh-7rem))] items-center justify-center px-6 py-24 text-center sm:px-12 sm:py-28 lg:px-20">
-          <div className="w-full max-w-3xl">
+        <div className="pointer-events-none relative z-10 flex min-h-[min(720px,calc(100vh-7rem))] items-center justify-center px-6 py-24 text-center sm:px-12 sm:py-28 lg:px-20">
+          <div className="pointer-events-auto w-full max-w-3xl">
             <p className="eyebrow text-[var(--focus-accent)]">Focus Room / distraction-free learning</p>
             <h1 className="mt-5 text-5xl font-black tracking-[-0.05em] text-[var(--focus-text)] sm:text-7xl sm:leading-[0.98]">
               Welcome to Focus Room.

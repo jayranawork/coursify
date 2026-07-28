@@ -168,7 +168,7 @@ function TrendingCoursesToggle({ query, navigate }) {
     <section className="page-shell py-20 sm:py-28">
       <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end sm:gap-4">
         <div><p className="eyebrow">Trending courses</p><h2 className="mt-2 text-3xl font-bold text-neutral-950 dark:text-white">What learners are starting this week.</h2></div>
-        <Button variant="outline" className="shrink-0 gap-2" onClick={() => setCardView((current) => !current)}>
+        <Button variant="outline" className="h-10 shrink-0 gap-2 rounded-md border-neutral-700 bg-transparent px-4 text-sm font-medium text-neutral-200 hover:bg-neutral-800 hover:text-white dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800" onClick={() => setCardView((current) => !current)}>
           {cardView ? <List aria-hidden="true" className="h-4 w-4" /> : <LayoutGrid aria-hidden="true" className="h-4 w-4" />}
           {cardView ? "View as list" : "View as cards"}
         </Button>

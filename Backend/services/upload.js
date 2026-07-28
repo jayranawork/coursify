@@ -6,6 +6,7 @@ const {
   createPresignedPutUrl,
   validateFileUpload,
 } = require("../utils/s3");
+const localVideoUpload = require("../utils/localVideoUpload");
 
 const ALLOWED_FOLDERS = {
   avatars: ["student", "instructor", "admin"],
@@ -95,6 +96,28 @@ const uploadService = {
       fileKey: key,
       ...presigned,
     };
+  },
+
+  async startLocalVideoUpload(actor, payload, request) {
+    const upload = await localVideoUpload.startUpload(actor, payload);
+    await recordAudit({ actor, action: "upload.local_video_started", resourceType: "upload", resourceId: upload.uploadId, metadata: { fileName: upload.fileName, contentType: upload.contentType, size: upload.size }, request });
+    return upload;
+  },
+  async localVideoUploadStatus(actor, uploadId) {
+    return localVideoUpload.getStatus(actor, uploadId);
+  },
+  async writeLocalVideoChunk(actor, uploadId, offset, chunk) {
+    return localVideoUpload.writeChunk(actor, uploadId, offset, chunk);
+  },
+  async completeLocalVideoUpload(actor, uploadId, request) {
+    const result = await localVideoUpload.completeUpload(actor, uploadId);
+    await recordAudit({ actor, action: "upload.local_video_completed", resourceType: "upload", resourceId: uploadId, metadata: { fileKey: result.fileKey, fileName: result.fileName, size: result.size }, request });
+    return result;
+  },
+  async cancelLocalVideoUpload(actor, uploadId, request) {
+    const result = await localVideoUpload.cancelUpload(actor, uploadId);
+    await recordAudit({ actor, action: "upload.local_video_cancelled", resourceType: "upload", resourceId: uploadId, request });
+    return result;
   },
 };
 

@@ -271,6 +271,10 @@ export const courseApi = {
     const response = await api.get("/courses/instructor/me", { params: query });
     return unwrap(response);
   },
+  async instructorDetails(id) {
+    const response = await api.get(`/courses/instructor/${id}`);
+    return unwrap(response);
+  },
   async createSection(courseId, payload) {
     const response = await api.post(`/courses/${courseId}/sections`, payload);
     return unwrap(response);
@@ -572,5 +576,68 @@ export const uploadApi = {
     }
 
     return true;
+  },
+  async startLocalVideoUpload({ fileName, contentType, size }) {
+    const response = await api.post("/uploads/local-video", { fileName, contentType, size });
+    return unwrap(response);
+  },
+  async getLocalVideoUploadStatus(uploadId) {
+    const response = await api.get(`/uploads/local-video/${uploadId}`);
+    return unwrap(response);
+  },
+  async uploadLocalVideoResumable(file, onProgress) {
+    const chunkSize = 5 * 1024 * 1024;
+    const fingerprint = `coursify-local-video:${file.name}:${file.size}:${file.lastModified}`;
+    const savedUploadId = localStorage.getItem(fingerprint);
+    let upload = null;
+
+    if (savedUploadId) {
+      try {
+        upload = await this.getLocalVideoUploadStatus(savedUploadId);
+      } catch {
+        localStorage.removeItem(fingerprint);
+      }
+    }
+    if (!upload) {
+      upload = await this.startLocalVideoUpload({ fileName: file.name, contentType: file.type, size: file.size });
+      localStorage.setItem(fingerprint, upload.uploadId);
+    }
+
+    let offset = Number(upload.uploadedBytes || 0);
+    onProgress?.({ uploadedBytes: offset, totalBytes: file.size, percent: Math.round((offset / file.size) * 100) });
+    while (offset < file.size) {
+      const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+      let next;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const response = await api.patch(`/uploads/local-video/${upload.uploadId}/chunk`, chunk, {
+            headers: { "Content-Type": "application/octet-stream", "Upload-Offset": String(offset) },
+          });
+          next = unwrap(response);
+          break;
+        } catch (error) {
+          if (error?.response?.status === 409) {
+            const latest = await this.getLocalVideoUploadStatus(upload.uploadId);
+            const latestOffset = Number(latest.uploadedBytes || 0);
+            if (latestOffset > offset) {
+              offset = latestOffset;
+              onProgress?.({ uploadedBytes: offset, totalBytes: file.size, percent: Math.round((offset / file.size) * 100) });
+              next = latest;
+              break;
+            }
+          }
+          if (attempt === 3) throw error;
+        }
+      }
+      offset = Number(next.uploadedBytes || offset + chunk.size);
+      onProgress?.({ uploadedBytes: offset, totalBytes: file.size, percent: Math.round((offset / file.size) * 100) });
+    }
+
+    const response = await api.post(`/uploads/local-video/${upload.uploadId}/complete`);
+    localStorage.removeItem(fingerprint);
+    const result = unwrap(response);
+    return result.fileUrl?.startsWith("/")
+      ? { ...result, fileUrl: new URL(result.fileUrl, api.defaults.baseURL.replace(/\/api\/?$/, "/")).toString() }
+      : result;
   },
 };

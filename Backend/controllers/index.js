@@ -106,6 +106,10 @@ const courseController = {
     const data = await courseService.instructorCourses(req.user.id, req.query);
     send(res, data);
   }),
+  instructorDetails: asyncHandler(async (req, res) => {
+    const data = await courseService.instructorCourseDetails(req.user, req.params.id);
+    send(res, data);
+  }),
   lessonAccess: asyncHandler(async (req, res) => {
     const data = await enrollmentService.getLessonAccessUrl(req.user, req.params.id, req.params.lessonId);
     send(res, data);
@@ -314,6 +318,11 @@ const uploadController = {
     const data = await uploadService.requestLessonFileUpload(req.user, req.body, req);
     send(res, data, 201);
   }),
+  localVideoStart: asyncHandler(async (req, res) => send(res, await uploadService.startLocalVideoUpload(req.user, req.body, req), 201)),
+  localVideoStatus: asyncHandler(async (req, res) => send(res, await uploadService.localVideoUploadStatus(req.user, req.params.uploadId))),
+  localVideoChunk: asyncHandler(async (req, res) => send(res, await uploadService.writeLocalVideoChunk(req.user, req.params.uploadId, req.headers["upload-offset"], req.body))),
+  localVideoComplete: asyncHandler(async (req, res) => send(res, await uploadService.completeLocalVideoUpload(req.user, req.params.uploadId, req))),
+  localVideoCancel: asyncHandler(async (req, res) => send(res, await uploadService.cancelLocalVideoUpload(req.user, req.params.uploadId, req))),
 };
 
 const instructorController = {

@@ -949,6 +949,17 @@ const courseService = {
     return paginate(Course, { instructorId }, { page: query.page, limit: query.limit, sort: { createdAt: -1 } });
   },
 
+  async instructorCourseDetails(actor, courseId) {
+    const course = await Course.findById(courseId);
+    if (!course) throw new ApiError(404, "Course not found");
+    if (!isOwnerOrAdmin(actor, course.instructorId)) throw new ApiError(403, "You cannot view this course");
+    const [sections, lessons] = await Promise.all([
+      CourseSection.find({ courseId }).sort({ order: 1 }),
+      Lesson.find({ courseId }).sort({ order: 1 }),
+    ]);
+    return { course, sections, lessons };
+  },
+
   async instructorStats(instructorId) {
     const courses = await Course.find({ instructorId });
     const courseIds = courses.map((course) => course._id);

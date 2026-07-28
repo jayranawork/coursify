@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const compression = require("compression");
+const path = require("path");
 
 const config = require("./config");
 const { notFound, errorHandler } = require("./middlewares/error");
@@ -65,6 +66,8 @@ app.get("/health/ready", (req, res) => {
   return res.status(ready ? 200 : 503).json({ success: ready, status: ready ? "ready" : "not_ready" });
 });
 app.get("/metrics", metricsHandler);
+// Local-development delivery only. Replace with protected provider playback before production.
+app.use("/uploads/videos", express.static(path.join(__dirname, "uploads", "videos")));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
