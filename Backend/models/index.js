@@ -373,6 +373,22 @@ const auditLogSchema = new Schema(
   { timestamps: true }
 );
 
+const mediaUploadSchema = new Schema(
+  {
+    userId: { type: ObjectId, required: true, index: true },
+    provider: { type: String, enum: ["s3"], required: true, default: "s3" },
+    uploadId: { type: String, required: true, unique: true, index: true },
+    key: { type: String, required: true },
+    folder: { type: String, required: true },
+    contentType: { type: String, required: true },
+    status: { type: String, enum: ["initiated", "completed", "aborted"], default: "initiated", index: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true }
+);
+
+mediaUploadSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ resourceType: 1, resourceId: 1, createdAt: -1 });
 
@@ -400,6 +416,7 @@ const WebhookDelivery = mongoose.models.WebhookDelivery || mongoose.model("Webho
 const Note = mongoose.models.Note || mongoose.model("Note", noteSchema);
 const NotePurchase = mongoose.models.NotePurchase || mongoose.model("NotePurchase", notePurchaseSchema);
 const AuditLog = mongoose.models.AuditLog || mongoose.model("AuditLog", auditLogSchema);
+const MediaUpload = mongoose.models.MediaUpload || mongoose.model("MediaUpload", mediaUploadSchema);
 
 module.exports = {
   User,
@@ -423,4 +440,5 @@ module.exports = {
   Note,
   NotePurchase,
   AuditLog,
+  MediaUpload,
 };

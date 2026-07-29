@@ -32,7 +32,7 @@ export function CoursePreview() {
     let active = true;
     setMediaUrl("");
     setMediaState("idle");
-    if (!currentLesson || currentLesson.type !== "video") return undefined;
+    if (!currentLesson || !["video", "pdf"].includes(currentLesson.type)) return undefined;
     courseApi.getLessonAccessUrl(id, currentLesson._id)
       .then((result) => {
         if (!active) return;
@@ -93,7 +93,7 @@ export function CoursePreview() {
           {!currentLesson ? <div className="grid min-h-[420px] place-items-center"><p className="text-slate-500">Add a lesson to preview this course.</p></div> : <>
             <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Lesson preview</p><h2 className="mt-2 text-2xl font-black text-slate-950">{currentLesson.title}</h2></div><Badge variant="outline">{currentLesson.type}</Badge></div>
             <div className="mt-6 overflow-hidden rounded-2xl bg-slate-950">
-              {currentLesson.type === "video" ? mediaUrl ? <video controls preload="metadata" className="aspect-video w-full" src={mediaUrl} onLoadStart={() => setMediaState("loading")} onCanPlay={() => setMediaState("ready")} onError={() => setMediaState("error")} /> : <div className="grid aspect-video place-items-center text-white"><p>{mediaState === "error" ? "Video could not be loaded." : "Loading video…"}</p></div> : currentLesson.type === "pdf" ? <iframe title={currentLesson.title} src={currentLesson.fileUrl || currentLesson.content || currentLesson.videoUrl} className="h-[520px] w-full bg-white" /> : <div className="prose prose-invert max-w-none p-6 whitespace-pre-line"><div>{stripHtml(currentLesson.content) || "No lesson content available."}</div></div>}
+              {currentLesson.type === "video" ? mediaUrl ? <video controls preload="metadata" className="aspect-video w-full" src={mediaUrl} onLoadStart={() => setMediaState("loading")} onCanPlay={() => setMediaState("ready")} onError={() => setMediaState("error")} /> : <div className="grid aspect-video place-items-center text-white"><p>{mediaState === "error" ? "Video could not be loaded." : "Loading video…"}</p></div> : currentLesson.type === "pdf" ? mediaUrl ? <iframe title={currentLesson.title} src={mediaUrl} className="h-[520px] w-full bg-white" /> : <div className="grid min-h-[420px] place-items-center bg-white text-slate-600"><p>{mediaState === "error" ? "PDF could not be loaded." : "Loading PDF…"}</p></div> : <div className="prose prose-invert max-w-none p-6 whitespace-pre-line"><div>{stripHtml(currentLesson.content) || "No lesson content available."}</div></div>}
             </div>
             <div className="mt-4 flex items-center gap-2 text-sm">{currentLesson.type === "video" && mediaState === "ready" ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /><span className="text-emerald-700">Video playback check passed.</span></> : currentLesson.type === "video" && mediaState === "error" ? <><CircleAlert className="h-4 w-4 text-red-500" /><span className="text-red-700">Video playback check failed.</span></> : <span className="text-slate-500">Play the lesson to verify it before publishing.</span>}</div>
             <div className="mt-5 flex flex-wrap gap-3"><Button onClick={() => setMediaState("loading")}><Play className="h-4 w-4" />Test lesson</Button><Button variant="outline" asChild><Link to={`/instructor/courses/${course._id}/edit`}>Replace media</Link></Button></div>

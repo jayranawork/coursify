@@ -3,8 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const ApiError = require("./apiError");
 
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
-const MAX_CHUNK_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = Math.max(1, Number(process.env.LOCAL_UPLOAD_MAX_MB || 200)) * 1024 * 1024;
+const MAX_CHUNK_BYTES = Math.max(1, Number(process.env.LOCAL_UPLOAD_CHUNK_MB || 8)) * 1024 * 1024;
 const VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime", "video/mpeg"]);
 const uploadRoot = path.resolve(process.env.LOCAL_VIDEO_UPLOAD_DIR || path.join(__dirname, "..", "uploads"));
 const tempRoot = path.join(uploadRoot, ".chunks");

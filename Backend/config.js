@@ -37,6 +37,17 @@ const config = {
   metricsEnabled: process.env.METRICS_ENABLED !== "false",
   metricsToken: process.env.METRICS_TOKEN || "",
   queueEnabled: process.env.QUEUE_ENABLED === "true",
+  mediaStorageProvider: process.env.MEDIA_STORAGE_PROVIDER || "s3",
+  localMediaRoot: process.env.LOCAL_MEDIA_ROOT || require("path").join(__dirname, "uploads", "media"),
+  localUploadMaxBytes: Math.max(1, Number(process.env.LOCAL_UPLOAD_MAX_MB || 200)) * 1024 * 1024,
+  localUploadChunkBytes: Math.max(1, Number(process.env.LOCAL_UPLOAD_CHUNK_MB || 8)) * 1024 * 1024,
+  s3MultipartPartBytes: Math.max(5, Number(process.env.S3_MULTIPART_PART_MB || 8)) * 1024 * 1024,
+  s3PresignExpiresSeconds: Math.min(3600, Math.max(60, Number(process.env.S3_PRESIGN_EXPIRES_SECONDS || 900))),
+  s3MultipartSessionTtlHours: Math.max(1, Number(process.env.S3_MULTIPART_SESSION_TTL_HOURS || 24)),
 };
+
+if (!["s3", "local"].includes(config.mediaStorageProvider)) {
+  throw new Error("MEDIA_STORAGE_PROVIDER must be either s3 or local");
+}
 
 module.exports = config;

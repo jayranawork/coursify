@@ -550,6 +550,10 @@ export const playlistApi = {
 };
 
 export const uploadApi = {
+  async getConfig() {
+    const response = await api.get("/uploads/config");
+    return unwrap(response);
+  },
   async uploadImage({ dataUrl, folder = "avatars", publicId }) {
     const response = await api.post("/uploads/image", { dataUrl, folder, publicId });
     return unwrap(response);
@@ -576,6 +580,79 @@ export const uploadApi = {
     }
 
     return true;
+  },
+  async uploadLocalFile(file, folder) {
+    const formData = new FormData();
+    formData.append("folder", folder);
+    formData.append("file", file);
+    const response = await api.post("/uploads/local-file", formData);
+    return unwrap(response);
+  },
+  async uploadS3Multipart(file, folder, onProgress) {
+    const fingerprint = `skillnest-s3-multipart:${folder}:${file.name}:${file.size}:${file.lastModified}`;
+    const savedSession = localStorage.getItem(fingerprint);
+    let session = null;
+    if (savedSession) {
+      try {
+        session = JSON.parse(savedSession);
+      } catch {
+        localStorage.removeItem(fingerprint);
+      }
+    }
+    if (session?.uploadId) {
+      try {
+        const status = await this.getS3MultipartStatus(session.uploadId);
+        session = { ...session, ...status, parts: status.parts || session.parts || [] };
+      } catch {
+        localStorage.removeItem(fingerprint);
+        session = null;
+      }
+    }
+    if (!session) {
+      session = await unwrap(await api.post("/uploads/s3-multipart/initiate", {
+        fileName: file.name,
+        contentType: file.type,
+        folder,
+      }));
+      session.parts = [];
+      localStorage.setItem(fingerprint, JSON.stringify(session));
+    }
+    const partSize = Number(session.partSize || 8 * 1024 * 1024);
+    const partsByNumber = new Map((session.parts || []).map((part) => [Number(part.partNumber), part]));
+    const totalParts = Math.ceil(file.size / partSize);
+      for (let index = 0; index < totalParts; index += 1) {
+        const partNumber = index + 1;
+        const existingPart = partsByNumber.get(partNumber);
+        if (existingPart?.etag) {
+          onProgress?.({ uploadedBytes: Math.min((index + 1) * partSize, file.size), totalBytes: file.size, percent: Math.round(((index + 1) / totalParts) * 100) });
+          continue;
+        }
+        const chunk = file.slice(index * partSize, Math.min((index + 1) * partSize, file.size));
+        const partUrl = await unwrap(await api.post(`/uploads/s3-multipart/${session.uploadId}/part-url`, { partNumber }));
+        const response = await fetch(partUrl.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: chunk,
+        });
+        if (!response.ok) throw new Error(`S3 part ${partNumber} upload failed`);
+        const etag = response.headers.get("ETag") || response.headers.get("etag");
+        if (!etag) throw new Error("S3 did not return an ETag for the uploaded part");
+        partsByNumber.set(partNumber, { partNumber, etag });
+        session.parts = Array.from(partsByNumber.values()).sort((left, right) => left.partNumber - right.partNumber);
+        localStorage.setItem(fingerprint, JSON.stringify(session));
+        onProgress?.({ uploadedBytes: Math.min((index + 1) * partSize, file.size), totalBytes: file.size, percent: Math.round(((index + 1) / totalParts) * 100) });
+      }
+    const result = await unwrap(await api.post(`/uploads/s3-multipart/${session.uploadId}/complete`, { parts: session.parts }));
+    localStorage.removeItem(fingerprint);
+    return result;
+  },
+  async getS3MultipartStatus(uploadId) {
+    const response = await api.get(`/uploads/s3-multipart/${uploadId}`);
+    return unwrap(response);
+  },
+  async abortS3Multipart(uploadId) {
+    const response = await api.delete(`/uploads/s3-multipart/${uploadId}`);
+    return unwrap(response);
   },
   async startLocalVideoUpload({ fileName, contentType, size }) {
     const response = await api.post("/uploads/local-video", { fileName, contentType, size });
@@ -610,8 +687,10 @@ export const uploadApi = {
       let next;
       for (let attempt = 1; attempt <= 3; attempt += 1) {
         try {
-          const response = await api.patch(`/uploads/local-video/${upload.uploadId}/chunk`, chunk, {
-            headers: { "Content-Type": "application/octet-stream", "Upload-Offset": String(offset) },
+          const formData = new FormData();
+          formData.append("chunk", new Blob([chunk], { type: file.type || "application/octet-stream" }), "chunk");
+          const response = await api.patch(`/uploads/local-video/${upload.uploadId}/chunk`, formData, {
+            headers: { "Upload-Offset": String(offset) },
           });
           next = unwrap(response);
           break;

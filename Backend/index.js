@@ -68,6 +68,7 @@ app.get("/health/ready", (req, res) => {
 app.get("/metrics", metricsHandler);
 // Local-development delivery only. Replace with protected provider playback before production.
 app.use("/uploads/videos", express.static(path.join(__dirname, "uploads", "videos")));
+app.use("/uploads/media", express.static(config.localMediaRoot));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

@@ -306,6 +306,7 @@ const notificationController = {
 };
 
 const uploadController = {
+  config: asyncHandler(async (req, res) => send(res, uploadService.getConfig())),
   image: asyncHandler(async (req, res) => {
     const data = await uploadService.uploadImage(req.user, req.body, req);
     send(res, data, 201);
@@ -318,9 +319,18 @@ const uploadController = {
     const data = await uploadService.requestLessonFileUpload(req.user, req.body, req);
     send(res, data, 201);
   }),
+  localFile: asyncHandler(async (req, res) => {
+    const data = await uploadService.completeLocalFileUpload(req.user, req.file, req.body.folder, req);
+    send(res, data, 201);
+  }),
+  s3MultipartInitiate: asyncHandler(async (req, res) => send(res, await uploadService.initiateS3Multipart(req.user, req.body, req), 201)),
+  s3MultipartStatus: asyncHandler(async (req, res) => send(res, await uploadService.getS3MultipartStatus(req.user, req.params.uploadId))),
+  s3MultipartPartUrl: asyncHandler(async (req, res) => send(res, await uploadService.getS3MultipartPartUrl(req.user, req.params.uploadId, req.body.partNumber))),
+  s3MultipartComplete: asyncHandler(async (req, res) => send(res, await uploadService.completeS3Multipart(req.user, req.params.uploadId, req.body.parts, req))),
+  s3MultipartAbort: asyncHandler(async (req, res) => send(res, await uploadService.abortS3Multipart(req.user, req.params.uploadId, req))),
   localVideoStart: asyncHandler(async (req, res) => send(res, await uploadService.startLocalVideoUpload(req.user, req.body, req), 201)),
   localVideoStatus: asyncHandler(async (req, res) => send(res, await uploadService.localVideoUploadStatus(req.user, req.params.uploadId))),
-  localVideoChunk: asyncHandler(async (req, res) => send(res, await uploadService.writeLocalVideoChunk(req.user, req.params.uploadId, req.headers["upload-offset"], req.body))),
+  localVideoChunk: asyncHandler(async (req, res) => send(res, await uploadService.writeLocalVideoChunk(req.user, req.params.uploadId, req.headers["upload-offset"], req.file?.buffer))),
   localVideoComplete: asyncHandler(async (req, res) => send(res, await uploadService.completeLocalVideoUpload(req.user, req.params.uploadId, req))),
   localVideoCancel: asyncHandler(async (req, res) => send(res, await uploadService.cancelLocalVideoUpload(req.user, req.params.uploadId, req))),
 };
