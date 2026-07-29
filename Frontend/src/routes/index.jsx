@@ -17,6 +17,7 @@ const Login = lazyNamed(() => import("../pages/public/Login"), "Login");
 const Register = lazyNamed(() => import("../pages/public/Register"), "Register");
 const ForgotPassword = lazyNamed(() => import("../pages/public/ForgotPassword"), "ForgotPassword");
 const ResetPassword = lazyNamed(() => import("../pages/public/ResetPassword"), "ResetPassword");
+const PaymentResult = lazyNamed(() => import("../pages/public/PaymentResult"), "PaymentResult");
 
 const StudentDashboard = lazyNamed(() => import("../pages/student/Dashboard"), "Dashboard");
 const StudentCourses = lazyNamed(() => import("../pages/student/MyCourses"), "MyCourses");
@@ -74,6 +75,19 @@ export function AppRoutes() {
           <Route path="orders" element={<OrderHistory />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="profile" element={<StudentProfile />} />
+        </Route>
+
+        <Route
+          path="/payment/result"
+          element={
+            <ProtectedRoute>
+              <RoleGuard allowedRoles={["student"]}>
+                <StudentLayout />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<PaymentResult />} />
         </Route>
 
         <Route

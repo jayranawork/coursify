@@ -50,6 +50,7 @@ const schema = z.object({
   tagsText: z.string().optional(),
   isPublished: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
+  maxSeats: z.preprocess((value) => (value === "" || value === undefined || value === null ? null : value), z.coerce.number().int().min(1).nullable()),
   sections: z.array(sectionSchema).default([]),
 });
 
@@ -79,6 +80,7 @@ export function CourseEditor() {
       tagsText: "",
       isPublished: false,
       isFeatured: false,
+      maxSeats: null,
       sections: [],
       ...(savedDraft || {}),
     },
@@ -117,6 +119,7 @@ export function CourseEditor() {
         tagsText: "",
         isPublished: false,
         isFeatured: false,
+        maxSeats: null,
         sections: [],
         ...(readCourseDraft(draftKey) || {}),
       });
@@ -180,6 +183,7 @@ export function CourseEditor() {
         tags,
         isPublished: Boolean(values.isPublished),
         isFeatured: Boolean(values.isFeatured),
+        maxSeats: values.maxSeats === null ? null : Number(values.maxSeats),
       };
 
       const savedCourse = isEdit ? await courseApi.update(id, payload) : await courseApi.create(payload);
@@ -265,6 +269,9 @@ export function CourseEditor() {
             </Field>
             <Field label="Language">
               <Input {...editorForm.register("language")} />
+            </Field>
+            <Field label="Maximum seats (blank for unlimited)">
+              <Input type="number" min="1" placeholder="Unlimited" {...editorForm.register("maxSeats")} />
             </Field>
             <div className="md:col-span-2">
               <Field label="Short description">
@@ -700,6 +707,7 @@ async function loadCourse(courseId, form) {
     tagsText,
     isPublished: Boolean(course.course.isPublished),
     isFeatured: Boolean(course.course.isFeatured),
+    maxSeats: course.course.maxSeats ?? null,
     sections,
   };
   const draft = readCourseDraft(`skillnest-course-draft:${courseId}`);

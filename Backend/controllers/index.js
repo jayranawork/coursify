@@ -182,6 +182,10 @@ const orderController = {
     const data = await orderService.myOrders(req.user.id);
     send(res, data);
   }),
+  status: asyncHandler(async (req, res) => {
+    const data = await orderService.getMyOrder(req.user.id, req.params.id);
+    send(res, data);
+  }),
   list: asyncHandler(async (req, res) => {
     const data = await orderService.listOrders(req.query);
     send(res, data);
@@ -196,6 +200,10 @@ const orderController = {
   }),
   webhookMonitoring: asyncHandler(async (req, res) => {
     const data = await orderService.listWebhookDeliveries(req.query.limit);
+    send(res, data);
+  }),
+  replayWebhook: asyncHandler(async (req, res) => {
+    const data = await orderService.replayWebhookDelivery(req.user, req.params.id, req);
     send(res, data);
   }),
 };

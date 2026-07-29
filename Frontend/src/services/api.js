@@ -374,6 +374,10 @@ export const orderApi = {
   async myOrders() {
     return orderApi.getMyOrders();
   },
+  async status(id) {
+    const response = await api.get(`/orders/${id}/status`);
+    return unwrap(response);
+  },
   async list(query = {}) {
     const response = await api.get("/orders", { params: query });
     return unwrap(response);
@@ -388,6 +392,10 @@ export const orderApi = {
   },
   async webhookMonitoring(limit = 50) {
     const response = await api.get("/orders/webhook-monitoring", { params: { limit } });
+    return unwrap(response);
+  },
+  async replayWebhook(id) {
+    const response = await api.post(`/orders/webhook-monitoring/${id}/replay`);
     return unwrap(response);
   },
 };
