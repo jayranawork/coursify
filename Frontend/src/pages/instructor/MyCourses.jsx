@@ -1,4 +1,7 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useInstructorCourses } from "@/hooks/useCourses";
 import { Button, Card, Badge } from "@/components/ui";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -6,9 +9,25 @@ import { ErrorState } from "@/components/common/ErrorState";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatPrice } from "@/utils/formatPrice";
 import { formatDate } from "@/utils/formatDate";
+import { courseApi, getApiErrorMessage } from "@/services/api";
 
 export function MyCourses() {
   const coursesQuery = useInstructorCourses({ limit: 50 });
+  const queryClient = useQueryClient();
+  const [busyId, setBusyId] = useState("");
+
+  const runAction = async (course, action, successMessage) => {
+    setBusyId(course._id);
+    try {
+      await action(course._id);
+      await queryClient.invalidateQueries({ queryKey: ["instructor-courses"] });
+      toast.success(successMessage);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    } finally {
+      setBusyId("");
+    }
+  };
 
   if (coursesQuery.isLoading) return <LoadingSpinner />;
   if (coursesQuery.isError) return <ErrorState description="We could not load your courses." onRetry={() => coursesQuery.refetch()} />;
@@ -49,6 +68,8 @@ export function MyCourses() {
                   <Button asChild variant="outline" className="shrink-0 whitespace-nowrap">
                     <Link to={`/instructor/courses/${course._id}/edit`}>Edit</Link>
                   </Button>
+                  <Button variant="outline" className="shrink-0 whitespace-nowrap" disabled={busyId === course._id} onClick={() => runAction(course, courseApi.duplicate, "Course duplicated")}>Duplicate</Button>
+                  {!course.isPublished && course.workflowStatus !== "pending_review" ? <Button variant="outline" className="shrink-0 whitespace-nowrap" disabled={busyId === course._id} onClick={() => runAction(course, courseApi.requestReview, "Course submitted for review")}>Submit review</Button> : null}
                 </div>
               </div>
             </Card>
